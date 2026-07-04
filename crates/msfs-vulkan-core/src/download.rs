@@ -46,13 +46,9 @@ pub fn ensure_runtime(config: &crate::Config) -> Result<()> {
     Ok(())
 }
 
-pub fn download_and_extract(
-    repo: &str,
-    is_vkd3d: bool,
-    payload_dir: &Path,
-) -> Result<()> {
+pub fn download_and_extract(repo: &str, is_vkd3d: bool, payload_dir: &Path) -> Result<()> {
     let api_url = format!("https://api.github.com/repos/{}/releases/latest", repo);
-    
+
     // Fetch release info
     let response = ureq::get(&api_url)
         .set("User-Agent", "msfs-vulkan-downloader")
@@ -63,34 +59,41 @@ pub fn download_and_extract(
         bail!("GitHub API returned status {}", response.status());
     }
 
-    let release: GitHubRelease = response.into_json()
+    let release: GitHubRelease = response
+        .into_json()
         .context("failed to parse GitHub release JSON")?;
 
     // Find the right asset
-    let asset = release.assets.into_iter().find(|a| {
-        if is_vkd3d {
-            a.name.ends_with(".tar.zst")
-        } else {
-            a.name.ends_with(".tar.gz")
-        }
-    }).context(format!("No matching archive asset found in {}", repo))?;
+    let asset = release
+        .assets
+        .into_iter()
+        .find(|a| {
+            if is_vkd3d {
+                a.name.ends_with(".tar.zst")
+            } else {
+                a.name.ends_with(".tar.gz")
+            }
+        })
+        .context(format!("No matching archive asset found in {}", repo))?;
 
     // Download the archive
     let response = ureq::get(&asset.browser_download_url)
         .set("User-Agent", "msfs-vulkan-downloader")
         .call()
         .with_context(|| format!("failed to download {}", asset.browser_download_url))?;
-        
+
     let mut reader = response.into_reader();
     let mut buffer = Vec::new();
-    reader.read_to_end(&mut buffer).context("failed to read download stream")?;
-    
+    reader
+        .read_to_end(&mut buffer)
+        .context("failed to read download stream")?;
+
     // Ensure payload directory exists
     fs::create_dir_all(payload_dir).context("failed to create payload directory")?;
 
     // Extract specific files from archive
     let cursor = Cursor::new(buffer);
-    
+
     if is_vkd3d {
         let decoder = ZstdDecoder::new(cursor).context("failed to initialize zstd decoder")?;
         let mut archive = Archive::new(decoder);
@@ -105,10 +108,16 @@ pub fn download_and_extract(
 }
 
 fn extract_x64_dlls<R: Read>(archive: &mut Archive<R>, payload_dir: &Path) -> Result<()> {
-    for entry in archive.entries().context("failed to read archive entries")? {
+    for entry in archive
+        .entries()
+        .context("failed to read archive entries")?
+    {
         let mut entry = entry.context("failed to read archive entry")?;
-        let path = entry.path().context("failed to read entry path")?.to_path_buf();
-        
+        let path = entry
+            .path()
+            .context("failed to read entry path")?
+            .to_path_buf();
+
         let path_str = path.to_string_lossy().to_lowercase();
         // We only want the 64-bit DLLs
         if path_str.contains("x64") && path_str.ends_with(".dll") {

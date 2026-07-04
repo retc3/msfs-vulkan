@@ -1,13 +1,11 @@
 #![windows_subsystem = "windows"]
 
-use std::path::PathBuf;
 use anyhow::Result;
+use msfs_vulkan_core::{Config, Deployment, LaunchOptions, Preset, launch};
+use native_windows_derive::NwgUi;
 use native_windows_gui as nwg;
 use native_windows_gui::NativeUi;
-use native_windows_derive::NwgUi;
-use msfs_vulkan_core::{
-    Config, Deployment, LaunchOptions, Preset, launch,
-};
+use std::path::PathBuf;
 
 #[derive(Default, NwgUi)]
 pub struct MsfsVulkanApp {
@@ -95,13 +93,18 @@ impl MsfsVulkanApp {
 
         let installations = self.installations.borrow();
         if installations.is_empty() {
-            nwg::modal_error_message(&self.window, "Error", "No MSFS 2020 or 2024 installation found. Cannot apply configuration.");
+            nwg::modal_error_message(
+                &self.window,
+                "Error",
+                "No MSFS 2020 or 2024 installation found. Cannot apply configuration.",
+            );
             return;
         }
 
         let selected_idx = self.combo_install.selection().unwrap_or(0);
         if let Some(installation) = installations.get(selected_idx) {
-            let mut config = Config::new(installation.game_dir.clone(), PathBuf::from("runtime/x64"));
+            let mut config =
+                Config::new(installation.game_dir.clone(), PathBuf::from("runtime/x64"));
             config.environment = preset.environment();
 
             let vkd3d = self.txt_repo_vkd3d.text();
@@ -115,9 +118,17 @@ impl MsfsVulkanApp {
             }
 
             if let Err(e) = config.save(&Self::config_path()) {
-                nwg::modal_error_message(&self.window, "Error", &format!("Failed to save configuration:\n{}", e));
+                nwg::modal_error_message(
+                    &self.window,
+                    "Error",
+                    &format!("Failed to save configuration:\n{}", e),
+                );
             } else {
-                nwg::modal_info_message(&self.window, "Success", "Configuration applied successfully.");
+                nwg::modal_info_message(
+                    &self.window,
+                    "Success",
+                    "Configuration applied successfully.",
+                );
             }
         } else {
             nwg::modal_error_message(&self.window, "Error", "Selected installation is invalid.");
@@ -127,14 +138,21 @@ impl MsfsVulkanApp {
     fn on_init(&self) {
         match msfs_vulkan_core::discover_installations() {
             Ok(found) => {
-                let labels: Vec<String> = found.iter().map(|inst| {
-                    let version = if inst.executable.file_name().map_or(false, |n| n == "FlightSimulator2024.exe") {
-                        "MSFS 2024"
-                    } else {
-                        "MSFS 2020"
-                    };
-                    format!("{} ({}) - {}", version, inst.store, inst.game_dir.display())
-                }).collect();
+                let labels: Vec<String> = found
+                    .iter()
+                    .map(|inst| {
+                        let version = if inst
+                            .executable
+                            .file_name()
+                            .map_or(false, |n| n == "FlightSimulator2024.exe")
+                        {
+                            "MSFS 2024"
+                        } else {
+                            "MSFS 2020"
+                        };
+                        format!("{} ({}) - {}", version, inst.store, inst.game_dir.display())
+                    })
+                    .collect();
 
                 for label in &labels {
                     self.combo_install.push(label.clone());
@@ -146,7 +164,11 @@ impl MsfsVulkanApp {
                 *self.installations.borrow_mut() = found;
             }
             Err(e) => {
-                nwg::modal_error_message(&self.window, "Error", &format!("Failed to discover MSFS installations:\n{}", e));
+                nwg::modal_error_message(
+                    &self.window,
+                    "Error",
+                    &format!("Failed to discover MSFS installations:\n{}", e),
+                );
             }
         }
     }
@@ -154,30 +176,54 @@ impl MsfsVulkanApp {
     fn install(&self) {
         let path = Self::config_path();
         if !path.exists() {
-            nwg::modal_error_message(&self.window, "Error", "Configuration not found. Please click 'Apply Configuration' first.");
+            nwg::modal_error_message(
+                &self.window,
+                "Error",
+                "Configuration not found. Please click 'Apply Configuration' first.",
+            );
             return;
         }
         match Config::load(&path) {
             Ok(config) => {
                 if let Err(e) = msfs_vulkan_core::download::ensure_runtime(&config) {
-                    nwg::modal_error_message(&self.window, "Error", &format!("Failed to download runtime:\n{}", e));
+                    nwg::modal_error_message(
+                        &self.window,
+                        "Error",
+                        &format!("Failed to download runtime:\n{}", e),
+                    );
                     return;
                 }
                 match Deployment::new(&config) {
                     Ok(deployment) => {
                         if let Err(e) = deployment.install() {
-                            nwg::modal_error_message(&self.window, "Error", &format!("Failed to install:\n{}", e));
+                            nwg::modal_error_message(
+                                &self.window,
+                                "Error",
+                                &format!("Failed to install:\n{}", e),
+                            );
                         } else {
-                            nwg::modal_info_message(&self.window, "Success", "Translation layer installed successfully.");
+                            nwg::modal_info_message(
+                                &self.window,
+                                "Success",
+                                "Translation layer installed successfully.",
+                            );
                         }
                     }
                     Err(e) => {
-                        nwg::modal_error_message(&self.window, "Error", &format!("Deployment error:\n{}", e));
+                        nwg::modal_error_message(
+                            &self.window,
+                            "Error",
+                            &format!("Deployment error:\n{}", e),
+                        );
                     }
                 }
             }
             Err(e) => {
-                nwg::modal_error_message(&self.window, "Error", &format!("Failed to load configuration:\n{}", e));
+                nwg::modal_error_message(
+                    &self.window,
+                    "Error",
+                    &format!("Failed to load configuration:\n{}", e),
+                );
             }
         }
     }
@@ -189,22 +235,36 @@ impl MsfsVulkanApp {
             return;
         }
         match Config::load(&path) {
-            Ok(config) => {
-                match Deployment::new(&config) {
-                    Ok(deployment) => {
-                        if let Err(e) = deployment.restore(true) {
-                            nwg::modal_error_message(&self.window, "Error", &format!("Failed to restore:\n{}", e));
-                        } else {
-                            nwg::modal_info_message(&self.window, "Success", "Original files restored successfully.");
-                        }
-                    }
-                    Err(e) => {
-                        nwg::modal_error_message(&self.window, "Error", &format!("Deployment error:\n{}", e));
+            Ok(config) => match Deployment::new(&config) {
+                Ok(deployment) => {
+                    if let Err(e) = deployment.restore(true) {
+                        nwg::modal_error_message(
+                            &self.window,
+                            "Error",
+                            &format!("Failed to restore:\n{}", e),
+                        );
+                    } else {
+                        nwg::modal_info_message(
+                            &self.window,
+                            "Success",
+                            "Original files restored successfully.",
+                        );
                     }
                 }
-            }
+                Err(e) => {
+                    nwg::modal_error_message(
+                        &self.window,
+                        "Error",
+                        &format!("Deployment error:\n{}", e),
+                    );
+                }
+            },
             Err(e) => {
-                nwg::modal_error_message(&self.window, "Error", &format!("Failed to load configuration:\n{}", e));
+                nwg::modal_error_message(
+                    &self.window,
+                    "Error",
+                    &format!("Failed to load configuration:\n{}", e),
+                );
             }
         }
     }
@@ -212,23 +272,43 @@ impl MsfsVulkanApp {
     fn run(&self) {
         let path = Self::config_path();
         if !path.exists() {
-            nwg::modal_error_message(&self.window, "Error", "Configuration not found. Please configure and install first.");
+            nwg::modal_error_message(
+                &self.window,
+                "Error",
+                "Configuration not found. Please configure and install first.",
+            );
             return;
         }
         match Config::load(&path) {
             Ok(config) => {
-                let options = LaunchOptions { arguments: vec![], wait: false, allow_uninstalled: false };
+                let options = LaunchOptions {
+                    arguments: vec![],
+                    wait: false,
+                    allow_uninstalled: false,
+                };
                 match launch(&config, &options) {
                     Ok(result) => {
-                        nwg::modal_info_message(&self.window, "Success", &format!("Started MSFS (PID: {})", result.process_id));
+                        nwg::modal_info_message(
+                            &self.window,
+                            "Success",
+                            &format!("Started MSFS (PID: {})", result.process_id),
+                        );
                     }
                     Err(e) => {
-                        nwg::modal_error_message(&self.window, "Error", &format!("Failed to launch:\n{}", e));
+                        nwg::modal_error_message(
+                            &self.window,
+                            "Error",
+                            &format!("Failed to launch:\n{}", e),
+                        );
                     }
                 }
             }
             Err(e) => {
-                nwg::modal_error_message(&self.window, "Error", &format!("Failed to load configuration:\n{}", e));
+                nwg::modal_error_message(
+                    &self.window,
+                    "Error",
+                    &format!("Failed to load configuration:\n{}", e),
+                );
             }
         }
     }
