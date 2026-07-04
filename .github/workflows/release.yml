@@ -41,7 +41,7 @@ jobs:
           Compress-Archive -Path release_artifacts/* -DestinationPath msfs-vulkan-windows-x64.zip
 
       - name: Create Draft GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: msfs-vulkan-windows-x64.zip
           draft: true
