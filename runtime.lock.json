@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-05",
+  "architecture": "x86_64",
+  "components": [
+    {
+      "name": "vkd3d-proton",
+      "version": "3.0.1",
+      "release_url": "https://github.com/HansKristian-Work/vkd3d-proton/releases/tag/v3.0.1",
+      "archive": "vkd3d-proton-3.0.1.tar.zst",
+      "archive_sha256": "3cf2315522af5e43605ef6d3c41dad91387040bf97199934f3f7ab76caaa2f0c",
+      "files": {
+        "d3d12.dll": "aed51497c0efa76c9ffc30386ff0957197824cd4734ce64b4e962d3551fba43c",
+        "d3d12core.dll": "68b8bc7b32f9b1b1b0526e9e2e769731dd8da9af0f2b40f76012385b9d5721df"
+      }
+    },
+    {
+      "name": "dxvk",
+      "version": "3.0",
+      "release_url": "https://github.com/doitsujin/dxvk/releases/tag/v3.0",
+      "archive": "dxvk-3.0.tar.gz",
+      "archive_sha256": "7dd3243fe1b260a0e9b0b9e49d672ae32e3398bee18c97e7e8569d0ef0eca92d",
+      "files": {
+        "d3d11.dll": "4ff4916573be5bfa433286d61594d1cc6901953694681c5e61f3d1263c025b97",
+        "dxgi.dll": "c13bcc082c0cb1d08bcb0b722483e4c78dbf595224ad7c90399281421b04f6f4"
+      }
+    }
+  ]
+}

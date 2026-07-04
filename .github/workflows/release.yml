@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger on version tags (e.g., v1.0.0)
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-release:
+    name: Build Release Binaries
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        
+      - name: Build Release (CLI & GUI)
+        run: cargo build --workspace --release
+        
+      - name: Prepare Artifacts
+        shell: pwsh
+        run: |
+          mkdir release_artifacts
+          copy target/release/msfs-vulkan.exe release_artifacts/
+          copy target/release/msfs-vulkan-gui.exe release_artifacts/
+          copy msfs-vulkan.example.toml release_artifacts/
+          Compress-Archive -Path release_artifacts/* -DestinationPath msfs-vulkan-windows-x64.zip
+          
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: msfs-vulkan-windows-x64.zip
+          generate_release_notes: true

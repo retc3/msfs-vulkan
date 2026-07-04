@@ -1,0 +1,37 @@
+schema-version = 1
+game-dir = 'C:\XboxGames\Microsoft Flight Simulator 2024\Content'
+payload-dir = "runtime/x64"
+executable = "FlightSimulator2024.exe"
+
+[[files]]
+source = "d3d12.dll"
+target = "d3d12.dll"
+
+[[files]]
+source = "d3d12core.dll"
+target = "d3d12core.dll"
+
+[[files]]
+source = "d3d11.dll"
+target = "d3d11.dll"
+
+[[files]]
+source = "dxgi.dll"
+target = "dxgi.dll"
+
+[environment]
+# --- VKD3D-Proton (D3D12 -> Vulkan) ---
+# DXR 1.1 for raytraced shadow support.
+# Use "nodxr" to disable raytracing if black squares persist.
+# Comma-separated: "dxr11,no_upload_hvv,force_static_cbv"
+VKD3D_CONFIG = "dxr11"
+VKD3D_FEATURE_LEVEL = "12_2"
+VKD3D_DEBUG = "none"
+
+# --- DXVK (D3D11 -> Vulkan) ---
+DXVK_LOG_LEVEL = "none"
+DXVK_STATE_CACHE = "1"
+
+# --- Advanced (uncomment as needed) ---
+# DXVK_HUD = "fps,frametimes"
+# VKD3D_VULKAN_DEVICE = "0"

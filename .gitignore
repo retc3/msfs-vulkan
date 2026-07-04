@@ -1,0 +1,9 @@
+/target/
+/runtime/
+/msfs-vulkan.toml
+*.log
+*.cache
+*.cache.write
+.idea/
+.vscode/
+

@@ -1,0 +1,19 @@
+[package]
+name = "msfs-vulkan-gui"
+description = "Native Windows GUI for msfs-vulkan"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+msfs-vulkan-core = { path = "../msfs-vulkan-core" }
+anyhow.workspace = true
+native-windows-gui = "1.0.13"
+native-windows-derive = "1.0.5"
+
+[lints]
+workspace = true
+
+[build-dependencies]
+winres = "0.1"

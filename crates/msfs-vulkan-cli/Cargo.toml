@@ -1,0 +1,21 @@
+[package]
+name = "msfs-vulkan-cli"
+description = "Reversible MSFS 2024 D3D12-to-Vulkan experiment launcher"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "msfs-vulkan"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+msfs-vulkan-core = { path = "../msfs-vulkan-core" }
+msfs-vulkan-vulkan = { path = "../msfs-vulkan-vulkan" }
+serde_json.workspace = true
+
+[lints]
+workspace = true

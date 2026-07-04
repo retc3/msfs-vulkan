@@ -1,0 +1,34 @@
+[workspace]
+members = [
+    "crates/msfs-vulkan-cli",
+    "crates/msfs-vulkan-core",
+    "crates/msfs-vulkan-gui",
+    "crates/msfs-vulkan-vulkan",
+]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+anyhow = "1.0.103"
+ash = "0.38.0"
+clap = { version = "4.6.1", features = ["derive"] }
+directories = "6.0.0"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+sha2 = "0.11.0"
+tempfile = "3.27.0"
+toml = "1.1.2"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
