@@ -20,6 +20,12 @@ struct GitHubAsset {
     browser_download_url: String,
 }
 
+/// Ensures the Vulkan runtime files are available in the configured runtime directory.
+///
+/// # Errors
+///
+/// Returns an error if the runtime directory cannot be created, or if a runtime
+/// component cannot be downloaded, read, extracted, or written.
 pub fn ensure_runtime(config: &crate::Config) -> Result<()> {
     let mut missing_vkd3d = false;
     let mut missing_dxvk = false;
@@ -46,14 +52,21 @@ pub fn ensure_runtime(config: &crate::Config) -> Result<()> {
     Ok(())
 }
 
+/// Downloads the latest release archive from a GitHub repository and extracts the required DLLs.
+///
+/// # Errors
+///
+/// Returns an error if the GitHub release cannot be fetched or parsed, if no
+/// matching archive asset is found, or if the archive cannot be downloaded,
+/// read, decoded, or extracted.
 pub fn download_and_extract(repo: &str, is_vkd3d: bool, payload_dir: &Path) -> Result<()> {
-    let api_url = format!("https://api.github.com/repos/{}/releases/latest", repo);
+    let api_url = format!("https://api.github.com/repos/{repo}/releases/latest");
 
     // Fetch release info
     let response = ureq::get(&api_url)
         .set("User-Agent", "msfs-vulkan-downloader")
         .call()
-        .with_context(|| format!("failed to fetch latest release from {}", api_url))?;
+        .with_context(|| format!("failed to fetch latest release from {api_url}"))?;
 
     if response.status() != 200 {
         bail!("GitHub API returned status {}", response.status());
@@ -74,7 +87,7 @@ pub fn download_and_extract(repo: &str, is_vkd3d: bool, payload_dir: &Path) -> R
                 a.name.ends_with(".tar.gz")
             }
         })
-        .context(format!("No matching archive asset found in {}", repo))?;
+        .context(format!("No matching archive asset found in {repo}"))?;
 
     // Download the archive
     let response = ureq::get(&asset.browser_download_url)
@@ -120,7 +133,11 @@ fn extract_x64_dlls<R: Read>(archive: &mut Archive<R>, payload_dir: &Path) -> Re
 
         let path_str = path.to_string_lossy().to_lowercase();
         // We only want the 64-bit DLLs
-        if path_str.contains("x64") && path_str.ends_with(".dll") {
+        let is_dll = path
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("dll"));
+
+        if path_str.contains("x64") && is_dll {
             if let Some(filename) = path.file_name() {
                 let target_path = payload_dir.join(filename);
                 let mut file = File::create(&target_path)

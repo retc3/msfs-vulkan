@@ -100,9 +100,8 @@ fn discover_from_roots(roots: &BTreeSet<PathBuf>) -> Result<Vec<GameInstallation
             if !manifest.is_file() {
                 continue;
             }
-            let text = match fs::read_to_string(&manifest) {
-                Ok(text) => text,
-                Err(_) => continue,
+            let Ok(text) = fs::read_to_string(&manifest) else {
+                continue;
             };
             let tokens = quoted_tokens(&text);
             let Some(index) = tokens

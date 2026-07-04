@@ -1,6 +1,5 @@
 #![windows_subsystem = "windows"]
 
-use anyhow::Result;
 use msfs_vulkan_core::{Config, Deployment, LaunchOptions, Preset, launch};
 use native_windows_derive::NwgUi;
 use native_windows_gui as nwg;
@@ -74,6 +73,7 @@ pub struct MsfsVulkanApp {
 }
 
 impl MsfsVulkanApp {
+    #[allow(clippy::unused_self)]
     fn exit(&self) {
         nwg::stop_thread_dispatch();
     }
@@ -121,7 +121,7 @@ impl MsfsVulkanApp {
                 nwg::modal_error_message(
                     &self.window,
                     "Error",
-                    &format!("Failed to save configuration:\n{}", e),
+                    &format!("Failed to save configuration:\n{e}"),
                 );
             } else {
                 nwg::modal_info_message(
@@ -144,7 +144,7 @@ impl MsfsVulkanApp {
                         let version = if inst
                             .executable
                             .file_name()
-                            .map_or(false, |n| n == "FlightSimulator2024.exe")
+                            .is_some_and(|n| n == "FlightSimulator2024.exe")
                         {
                             "MSFS 2024"
                         } else {
@@ -167,7 +167,7 @@ impl MsfsVulkanApp {
                 nwg::modal_error_message(
                     &self.window,
                     "Error",
-                    &format!("Failed to discover MSFS installations:\n{}", e),
+                    &format!("Failed to discover MSFS installations:\n{e}"),
                 );
             }
         }
@@ -189,7 +189,7 @@ impl MsfsVulkanApp {
                     nwg::modal_error_message(
                         &self.window,
                         "Error",
-                        &format!("Failed to download runtime:\n{}", e),
+                        &format!("Failed to download runtime:\n{e}"),
                     );
                     return;
                 }
@@ -199,7 +199,7 @@ impl MsfsVulkanApp {
                             nwg::modal_error_message(
                                 &self.window,
                                 "Error",
-                                &format!("Failed to install:\n{}", e),
+                                &format!("Failed to install:\n{e}"),
                             );
                         } else {
                             nwg::modal_info_message(
@@ -213,7 +213,7 @@ impl MsfsVulkanApp {
                         nwg::modal_error_message(
                             &self.window,
                             "Error",
-                            &format!("Deployment error:\n{}", e),
+                            &format!("Deployment error:\n{e}"),
                         );
                     }
                 }
@@ -222,7 +222,7 @@ impl MsfsVulkanApp {
                 nwg::modal_error_message(
                     &self.window,
                     "Error",
-                    &format!("Failed to load configuration:\n{}", e),
+                    &format!("Failed to load configuration:\n{e}"),
                 );
             }
         }
@@ -241,7 +241,7 @@ impl MsfsVulkanApp {
                         nwg::modal_error_message(
                             &self.window,
                             "Error",
-                            &format!("Failed to restore:\n{}", e),
+                            &format!("Failed to restore:\n{e}"),
                         );
                     } else {
                         nwg::modal_info_message(
@@ -255,7 +255,7 @@ impl MsfsVulkanApp {
                     nwg::modal_error_message(
                         &self.window,
                         "Error",
-                        &format!("Deployment error:\n{}", e),
+                        &format!("Deployment error:\n{e}"),
                     );
                 }
             },
@@ -263,7 +263,7 @@ impl MsfsVulkanApp {
                 nwg::modal_error_message(
                     &self.window,
                     "Error",
-                    &format!("Failed to load configuration:\n{}", e),
+                    &format!("Failed to load configuration:\n{e}"),
                 );
             }
         }
@@ -298,7 +298,7 @@ impl MsfsVulkanApp {
                         nwg::modal_error_message(
                             &self.window,
                             "Error",
-                            &format!("Failed to launch:\n{}", e),
+                            &format!("Failed to launch:\n{e}"),
                         );
                     }
                 }
@@ -307,23 +307,25 @@ impl MsfsVulkanApp {
                 nwg::modal_error_message(
                     &self.window,
                     "Error",
-                    &format!("Failed to load configuration:\n{}", e),
+                    &format!("Failed to load configuration:\n{e}"),
                 );
             }
         }
     }
 }
 
-fn main() -> Result<()> {
+fn main() {
     nwg::init().expect("Failed to init Native Windows GUI");
+
     let mut font = nwg::Font::default();
     nwg::Font::builder()
         .family("Segoe UI")
         .size(16)
         .build(&mut font)
         .expect("Failed to build font");
+
     nwg::Font::set_global_default(Some(font));
-    let _app = MsfsVulkanApp::build_ui(Default::default()).expect("Failed to build UI");
+
+    let _app = MsfsVulkanApp::build_ui(MsfsVulkanApp::default()).expect("Failed to build UI");
     nwg::dispatch_thread_events();
-    Ok(())
 }
