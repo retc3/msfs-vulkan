@@ -9,7 +9,7 @@ Wondering how `msfs-vulkan` was developed? It was fully built in Rust using a mo
 
 ## Safety Guarantee
 
-We know that often all of you have tons of GBs of Community addons etc which is why you wouldn't trust `msfs-vulkan` to potentally corrupt all of it, which is why this tool was written to **never** break it.
+We know that often all of you have tons of GBs of Community addons etc which is why you wouldn't trust `msfs-vulkan` to potentally corrupt all of it, which is why this tool was written to avoid corrupting it
 We first refuse to write files outside of the MSFS directory, Any files copied along with backups are verified with a SHA-256 hash, if this hash doesn't match then it aborts. 
 Deployment states are written before `msfs-vulkan` ever touchs your game files, Even if your PC crashes or deployment is interrupted midway through you can run `restore --force` **Although, `restore --force` only works within the CLI**
 
