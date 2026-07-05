@@ -6,7 +6,7 @@
 
 Welcome!`msfs-vulkan` is a translation layer to make MSFS2020/2024's DirectX 12 calls into Vulkan,
 
-It works by using translation layers: [KD3D-Proton](https://github.com/HansKristian-Work/vkd3d-protonand) and [DXVK](https://github.com/doitsujin/dxvkto) to take the MSFS DirectX calls and translate them into Vulkan calls, This may help performance on Linux systems and some low spec systems. You can restore the original MSFS files via the CLI or the GUI.
+It works by using translation layers: [KD3D-Proton](https://github.com/HansKristian-Work/vkd3d-proton) and [DXVK](https://github.com/doitsujin/dxvk) to take the MSFS DirectX calls and translate them into Vulkan calls, This may help performance on low spec systems. You can restore the original MSFS files via the CLI or the GUI.
 
 ## All the different parts
 
