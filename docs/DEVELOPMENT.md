@@ -1,26 +1,24 @@
-# Under the Hood: Development & Architecture
+# How `msfs-vulkan` was developed
 
-Curious about how `msfs-vulkan` is put together? We built the whole project in Rust, using a modular workspace architecture to keep things clean and separated. Here's how it breaks down:
+Wondering how `msfs-vulkan` was developed? It was fully built in Rust using a modular workspace architecture, It breaks down like this.
 
-- `msfs-vulkan-gui`: The shiny Windows interface you (probably) clicked on! It uses the super lightweight `native-windows-gui` crate.
-- `msfs-vulkan-cli`: The terminal equivalent for power users.
-- `msfs-vulkan-core`: The heavy lifter. It handles finding your game via Steam/Xbox, downloading DLLs from GitHub, swapping files around, taking backups, and launching the sim.
-- `msfs-vulkan-vulkan`: A tiny, isolated module that just pokes your Vulkan driver to see what it's capable of.
+- `msfs-vulkan-gui`: The GUI interface that most users will use which uses the `native-windows-gui` crate
+- `msfs-vulkan-cli`: The terminal version of the GUI, can be helpful incase you're having issues with the GUI or like the terminal more.
+- `msfs-vulkan-core`: This is what the Terminal and GUI both call, it is the base of `msfs-vulkan`, it is what finds your MSFS install, downloads the repos required, takes backups and then finally launchs MSFS2020/2024
+- `msfs-vulkan-vulkan` This is what simply checks your Graphics driver to see if it supports Vulkan 1.3 or higher
 
-## Our Safety Guarantee
+## Safety Guarantee
 
-We know how scary it is to let a random tool mess with your 150GB+ flight simulator installation. We built this tool with intense paranoia to make sure we **never** break your game:
+We know that often all of you have tons of GBs of Community addons etc which is why you wouldn't trust `msfs-vulkan` to potentally corrupt all of it, which is why this tool was written to **never** break it.
+We first refuse to write files outside of the MSFS directory, Any files copied along with backups are verified with a SHA-256 hash, if this hash doesn't match then it aborts. 
+Deployment states are written before `msfs-vulkan` ever touchs your game files, Even if your PC crashes or deployment is interrupted midway through you can run `restore --force` **Although, `restore --force` only works within the CLI**
 
-- **Strict Boundaries:** We refuse to write files anywhere outside of the configured `game-dir`. No sneaky `../` paths allowed.
-- **Hash Verification:** Every single file we copy (and every backup we take) is verified with a SHA-256 hash. If it doesn't match perfectly, we abort.
-- **Atomic-ish Deployments:** We write out our deployment state *before* we ever touch your game files.
-- **Bulletproof Restores:** Even if your PC crashes or the deployment is interrupted midway, running a `restore --force` will use our hashes to safely reconstruct your original game state.
+>[!IMPORTANT]
+>Whenever MSFS updates it may overwrite the translation DLLS, So we recommend before updating if you have the chance, Restoring your original MSFS files beforehand
 
-*Heads up: When MSFS pushes a big game update, it might overwrite or reject our translation DLLs. It's always best to hit "Restore Original Files" before downloading a sim update!*
+## Forking, Building or Pull Requests.
 
-## Contributing & Testing
-
-If you want to fork this, build it yourself, or send us a PR, you just need standard Cargo tooling:
+If you want to fork this, compile it yourself, or send a PR our way, you'll need just standard Cargo Tooling.
 
 ```powershell
 cargo fmt --all -- --check
@@ -28,4 +26,4 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 ```
 
-We also have a sweet GitHub Actions setup in the `.github` folder that runs all these checks automatically whenever you push code. Happy hacking!
+We've also setup for you a Github Actions setup within the `.github` folder that runs all checks automatically whenever you push any code.
