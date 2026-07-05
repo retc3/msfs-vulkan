@@ -1,9 +1,8 @@
 # msfs-vulkan
 
-> [!CAUTION]
-> **Heads up! This is highly experimental!**
+> [WARNING!]
 >
-> `msfs-vulkan` is a fun, experimental project. It's completely unsupported by Microsoft, Asobo, VKD3D-Proton, or DXVK. Just because the tool says your GPU can handle Vulkan doesn't mean MSFS will actually boot up or render perfectly. You might see some weird graphical glitches, deal with crashes, or get unexpected performance. Play around with it, but do so at your own risk!
+> `msfs-vulkan` is highly experimental, do not expect it to increase performance, Just because your GPU supports vulkan doesn't mean msfs-vulkan will work, MSFS may also be highly unstable while you're using msfs-vulkan. You accept the risk that your install of MSFS could be corrupted by this tool by installing it. You'll also probably see artifacting caused by the tool or crash mid way through a 14 hour flight.
 
 Welcome to `msfs-vulkan`! This is an experimental testing tool we built to see what happens when we run Microsoft Flight Simulator 2020 and 2024 using the Vulkan API instead of DirectX. 
 
