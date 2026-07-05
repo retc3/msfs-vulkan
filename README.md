@@ -25,4 +25,4 @@ Guides incase you need em
 
 - [Usage Guide](docs/USAGE.md): How to use the CLI or GUI clients to use `msfs-vulkan`
 - [Configuration Guide](docs/CONFIGURATION.md): How to configure `msfs-vulkan`, It's TOML settings, Performance presets, or make it point to your own fork of this project.
-- [Development Guide](docs/DEVELOPMENT.md): For whoevers interested, This tells you how `msfs-vulkan` was developed, The safety bounderies the tool takes to not corrupt your install, And how to compile the code yourself if you'd like.
+- [Development Guide](docs/DEVELOPMENT.md): For whoevers interested, This tells you how `msfs-vulkan` was developed, The safety boundaries the tool takes to not corrupt your install, And how to compile the code yourself if you'd like.
