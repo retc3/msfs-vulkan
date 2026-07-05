@@ -70,4 +70,4 @@ target\release\msfs-vulkan.exe restore
 ```
 
 ### Where are the logs?
-logs, shader caches, deployment state and backups are stored under the app's local AppData profile directory.
+All logs, shader caches, deployment state and backups are stored under the app's local AppData profile directory.
