@@ -2,8 +2,7 @@ use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result, anyhow};
-use directories::ProjectDirs;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -48,9 +47,17 @@ impl StateStore {
     ///
     /// Returns an error when the platform has no local application data directory.
     pub fn for_game(game_dir: &Path) -> Result<Self> {
-        let project_dirs = ProjectDirs::from("dev", "msfs-vulkan", "msfs-vulkan")
-            .ok_or_else(|| anyhow!("could not determine the local application data directory"))?;
-        Ok(Self::under(project_dirs.data_local_dir(), game_dir))
+        Ok(Self::under(&crate::config::app_data_dir()?, game_dir))
+    }
+
+    /// Return game directories with saved deployment state.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when local application data or a saved deployment state cannot be read.
+    pub fn known_game_dirs() -> Result<Vec<PathBuf>> {
+        let root = crate::config::app_data_dir()?.join("profiles");
+        known_game_dirs_under(&root)
     }
 
     pub fn under(base: &Path, game_dir: &Path) -> Self {
@@ -88,11 +95,7 @@ impl StateStore {
         if !path.exists() {
             return Ok(None);
         }
-        let bytes = fs::read(&path)
-            .with_context(|| format!("failed to read deployment state {}", path.display()))?;
-        let state = serde_json::from_slice(&bytes)
-            .with_context(|| format!("failed to parse deployment state {}", path.display()))?;
-        Ok(Some(state))
+        Ok(Some(read_state(&path)?))
     }
 
     /// Atomically persist deployment state.
@@ -129,6 +132,34 @@ impl StateStore {
         }
         Ok(())
     }
+}
+
+fn known_game_dirs_under(root: &Path) -> Result<Vec<PathBuf>> {
+    if !root.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut game_dirs = Vec::new();
+    for entry in
+        fs::read_dir(root).with_context(|| format!("failed to inspect {}", root.display()))?
+    {
+        let entry = entry.with_context(|| format!("failed to inspect {}", root.display()))?;
+        let state_path = entry.path().join("state.json");
+        if !state_path.is_file() {
+            continue;
+        }
+        game_dirs.push(read_state(&state_path)?.game_dir);
+    }
+    game_dirs.sort();
+    game_dirs.dedup();
+    Ok(game_dirs)
+}
+
+fn read_state(path: &Path) -> Result<DeploymentState> {
+    let bytes = fs::read(path)
+        .with_context(|| format!("failed to read deployment state {}", path.display()))?;
+    serde_json::from_slice(&bytes)
+        .with_context(|| format!("failed to parse deployment state {}", path.display()))
 }
 
 pub(crate) fn encode_hex(bytes: &[u8]) -> String {
@@ -174,4 +205,28 @@ pub(crate) fn replace_file(source: &Path, target: &Path) -> Result<()> {
             .with_context(|| format!("failed to remove {}", displaced.display()))?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lists_game_dirs_from_saved_deployment_states() {
+        let temp = tempfile::tempdir().unwrap();
+        let game_dir = temp.path().join("game");
+        let store = StateStore::under(temp.path(), &game_dir);
+        store
+            .save(&DeploymentState {
+                schema_version: 1,
+                game_dir: game_dir.clone(),
+                phase: Phase::Installed,
+                entries: Vec::new(),
+            })
+            .unwrap();
+
+        let found = known_game_dirs_under(&temp.path().join("profiles")).unwrap();
+
+        assert_eq!(found, [game_dir]);
+    }
 }
