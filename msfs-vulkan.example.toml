@@ -1,6 +1,8 @@
 schema-version = 1
 game-dir = 'C:\XboxGames\Microsoft Flight Simulator 2024\Content'
 payload-dir = "runtime/x64"
+vkd3d-repo = "HansKristian-Work/vkd3d-proton"
+dxvk-repo = "doitsujin/dxvk"
 executable = "FlightSimulator2024.exe"
 
 [[files]]

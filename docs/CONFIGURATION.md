@@ -38,17 +38,31 @@ target = "D3D12/D3D12Core.dll"
 ```
 *Don't worry, we always securely back up your original files before making any changes!*
 
+## Repository Source Dropdowns
+
+The GUI exposes VKD3D-Proton and DXVK sources as non-editable dropdowns. Clicking
+**Apply Configuration** saves the selected repository values into
+`msfs-vulkan.toml`.
+
+The built-in list intentionally contains repositories maintained by the project.
+`runtime.lock.json` remains a binary provenance file and does not control GUI
+choices.
+
 ## Pointing to Your Own Custom Forks
 
 This is where the magic happens! If you're a developer and you've created your own custom fork of VKD3D-Proton or DXVK specifically tailored for MSFS, you don't need to manually copy your files around. 
 
-Just pop open your `msfs-vulkan.toml` and look for these lines:
+Custom repositories are not entered through the GUI. Open `msfs-vulkan.toml` and
+edit these lines instead:
 ```toml
-vkd3d_repo = "HansKristian-Work/vkd3d-proton"
-dxvk_repo = "doitsujin/dxvk"
+vkd3d-repo = "HansKristian-Work/vkd3d-proton"
+dxvk-repo = "doitsujin/dxvk"
 ```
 
-Change them to point directly to your GitHub repository (like `"YourUsername/vkd3d-proton-msfs"`). The next time you click "Install Translation Layer," the tool will automatically grab the latest release straight from your repo!
+After restarting the GUI, an unrecognized value appears as **Custom from config**
+in the relevant dropdown. Applying the configuration preserves and saves that
+custom value. The next install downloads the latest compatible release archive
+from the configured GitHub repository.
 
 ## Environment Presets
 

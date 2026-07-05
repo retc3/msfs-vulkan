@@ -47,6 +47,13 @@ pub const DEFAULT_EXECUTABLE: &str = "FlightSimulator2024.exe";
 pub const DEFAULT_VKD3D_REPO: &str = "HansKristian-Work/vkd3d-proton";
 pub const DEFAULT_DXVK_REPO: &str = "doitsujin/dxvk";
 
+/// Repository choices exposed by the GUI. Custom values remain supported through TOML.
+pub const VKD3D_REPOSITORY_PRESETS: &[(&str, &str)] =
+    &[("Official VKD3D-Proton", DEFAULT_VKD3D_REPO)];
+
+/// Repository choices exposed by the GUI. Custom values remain supported through TOML.
+pub const DXVK_REPOSITORY_PRESETS: &[(&str, &str)] = &[("Official DXVK", DEFAULT_DXVK_REPO)];
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct Config {
@@ -228,10 +235,16 @@ mod tests {
 
     #[test]
     fn config_round_trip() {
-        let config = Config::new(PathBuf::from("C:/game"), PathBuf::from("runtime"));
+        let mut config = Config::new(PathBuf::from("C:/game"), PathBuf::from("runtime"));
+        config.vkd3d_repo = "example/vkd3d-custom".to_owned();
+        config.dxvk_repo = "example/dxvk-custom".to_owned();
         let text = toml::to_string(&config).unwrap();
         let decoded: Config = toml::from_str(&text).unwrap();
         assert_eq!(decoded.files, config.files);
+        assert_eq!(decoded.vkd3d_repo, config.vkd3d_repo);
+        assert_eq!(decoded.dxvk_repo, config.dxvk_repo);
+        assert!(text.contains("vkd3d-repo"));
+        assert!(text.contains("dxvk-repo"));
     }
 
     #[test]
