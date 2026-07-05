@@ -18,6 +18,9 @@ toml.workspace = true
 ureq = { version = "2", features = ["json"] }
 zstd = "0.13.3"
 
+[target.'cfg(windows)'.dependencies]
+winreg.workspace = true
+
 [dev-dependencies]
 tempfile.workspace = true
 
