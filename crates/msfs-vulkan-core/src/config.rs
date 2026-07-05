@@ -50,11 +50,16 @@ pub const DEFAULT_VKD3D_REPO: &str = "HansKristian-Work/vkd3d-proton";
 pub const DEFAULT_DXVK_REPO: &str = "doitsujin/dxvk";
 
 /// Repository choices exposed by the GUI. Custom values remain supported through TOML.
-pub const VKD3D_REPOSITORY_PRESETS: &[(&str, &str)] =
-    &[("Official VKD3D-Proton", DEFAULT_VKD3D_REPO)];
+pub const VKD3D_REPOSITORY_PRESETS: &[(&str, &str)] = &[
+    ("Official VKD3D-Proton", DEFAULT_VKD3D_REPO),
+    ("MSFS Tailored VKD3D", "retc3/msfs-vkd3d"),
+];
 
 /// Repository choices exposed by the GUI. Custom values remain supported through TOML.
-pub const DXVK_REPOSITORY_PRESETS: &[(&str, &str)] = &[("Official DXVK", DEFAULT_DXVK_REPO)];
+pub const DXVK_REPOSITORY_PRESETS: &[(&str, &str)] = &[
+    ("Official DXVK", DEFAULT_DXVK_REPO),
+    ("MSFS Tailored DXVK", "retc3/msfs-dxvk"),
+];
 
 /// Resolve the app-local data directory used for persistent config, state, logs, and runtime files.
 ///
