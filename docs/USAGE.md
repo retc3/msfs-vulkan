@@ -70,4 +70,4 @@ target\release\msfs-vulkan.exe restore
 ```
 
 ### Where are the logs?
-All logs are stored in `Appdata/Local/msfs-vulkan/data/profiles` This includes Shader caches, Deployment states, and the backup of your game files.
+logs, shader caches, deployment state and backups are stored under the app's local AppData profile directory.
