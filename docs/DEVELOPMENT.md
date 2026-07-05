@@ -14,7 +14,7 @@ We first refuse to write files outside of the MSFS directory, Any files copied a
 Deployment states are written before `msfs-vulkan` ever touchs your game files, Even if your PC crashes or deployment is interrupted midway through you can run `restore --force` **Although, `restore --force` only works within the CLI**
 
 >[!IMPORTANT]
->Whenever MSFS updates it may overwrite the translation DLLS, So we recommend before updating if you have the chance, Restoring your original MSFS files beforehand
+>Whenever MSFS updates it may overwrite the translation DLLs, So we recommend before updating if you have the chance, Restoring your original MSFS files beforehand
 
 ## Forking, Building or Pull Requests.
 
