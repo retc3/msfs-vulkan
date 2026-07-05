@@ -1,7 +1,7 @@
 # msfs-vulkan
 
-> [WARNING!]
->
+> [!CAUTION]
+> **WARNING!**
 > `msfs-vulkan` is highly experimental, do not expect it to increase performance, Just because your GPU supports vulkan doesn't mean msfs-vulkan will work, MSFS may also be highly unstable while you're using msfs-vulkan. You accept the risk that your install of MSFS could be corrupted by this tool by installing it. You'll also probably see artifacting caused by the tool or crash mid way through a 14 hour flight.
 
 Welcome to `msfs-vulkan`! This is an experimental testing tool we built to see what happens when we run Microsoft Flight Simulator 2020 and 2024 using the Vulkan API instead of DirectX. 
