@@ -1,29 +1,28 @@
 # msfs-vulkan
 
 > [!CAUTION]
-> **Heads up! This is highly experimental!**
->
-> `msfs-vulkan` is a fun, experimental project. It's completely unsupported by Microsoft, Asobo, VKD3D-Proton, or DXVK. Just because the tool says your GPU can handle Vulkan doesn't mean MSFS will actually boot up or render perfectly. You might see some weird graphical glitches, deal with crashes, or get unexpected performance. Play around with it, but do so at your own risk!
+> **WARNING!**
+> `msfs-vulkan` is highly experimental, do not expect it to increase performance, Just because your GPU supports Vulkan doesn't mean msfs-vulkan will work, MSFS may also be highly unstable while you're using msfs-vulkan. You accept the risk that your install of MSFS could be corrupted by this tool by installing it. You'll also probably see artifacting caused by the tool or crash mid way through a 14 hour flight.
 
-Welcome to `msfs-vulkan`! This is an experimental testing tool we built to see what happens when we run Microsoft Flight Simulator 2020 and 2024 using the Vulkan API instead of DirectX. 
+Welcome!`msfs-vulkan` is a translation layer to make MSFS2020/2024's DirectX 12 calls into Vulkan,
 
-How does it work? We don't actually rewrite the game's D3D12 engine. Instead, we use translation layers - specifically [VKD3D-Proton](https://github.com/HansKristian-Work/vkd3d-proton) and [DXVK](https://github.com/doitsujin/dxvk) - to intercept the game's D3D12 calls and translate them into Vulkan on the fly. This tool handles grabbing those DLLs, backing up your game files, launching the sim, and making sure everything gets restored to normal when you're done.
+It works by using translation layers: [KD3D-Proton](https://github.com/HansKristian-Work/vkd3d-proton) and [DXVK](https://github.com/doitsujin/dxvk) to take the MSFS DirectX calls and translate them into Vulkan calls, This may help performance on low spec systems. You can restore the original MSFS files via the CLI or the GUI.
 
-## What's in the box?
+## All the different parts
 
-We broke the project down into a few different pieces:
+`msfs-vulkan` is broken up into 4 different parts.
 
-- `msfs-vulkan-gui`: A friendly, easy-to-use Windows interface to manage everything.
-- `msfs-vulkan-cli`: If you prefer the terminal, this is the command-line version!
-- `msfs-vulkan-core`: The brains of the operation. It finds your Steam/Xbox installation, manages your configuration, handles downloading the translation layers, and keeps your original files safe.
-- `msfs-vulkan-vulkan`: A tiny, read-only probe that just checks what your Vulkan driver is capable of.
-
-*Note: We don't actually ship the third-party translation DLLs in this repo. The tool downloads them automatically for you when you're ready to play.*
+- `msfs-vulkan-gui`: A friendly Graphics interface for those who like GUI's instead of Terminals.
+- `msfs-vulkan-cli`: The CLI version, You'll need to call it within the Terminal
+- `msfs-vulkan-core`: As the name suggests, it's the main core of `msfs-vulkan`, without it none of this would work at all.
+- `msfs-vulkan-vulkan`: A tiny probe to check if your GPU can use Vulkan or not.
+  
+*The repos used in this project are installed by the tool, this repo does not have them.*
 
 ## Documentation
 
-Want to dive deeper? Check out our guides:
+Guides incase you need em 
 
-- [Usage Guide](docs/USAGE.md): How to actually use the GUI and CLI to run the game.
-- [Configuration Guide](docs/CONFIGURATION.md): How to tweak the TOML settings, use performance presets, or even point to your own custom GitHub forks!
-- [Development Guide](docs/DEVELOPMENT.md): For the nerds - how we built this, our safety guarantees, and how to compile the code yourself.
+- [Usage Guide](docs/USAGE.md): How to use the CLI or GUI clients to use `msfs-vulkan`
+- [Configuration Guide](docs/CONFIGURATION.md): How to configure `msfs-vulkan`, It's TOML settings, Performance presets, or make it point to your own fork of this project.
+- [Development Guide](docs/DEVELOPMENT.md): For whoevers interested, This tells you how `msfs-vulkan` was developed, The safety boundaries the tool takes to not corrupt your install, And how to compile the code yourself if you'd like.
