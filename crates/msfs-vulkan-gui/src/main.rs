@@ -1,6 +1,9 @@
 #![windows_subsystem = "windows"]
 
-use msfs_vulkan_core::{Config, Deployment, LaunchOptions, Preset, launch};
+use anyhow::{Context, Result, bail};
+use msfs_vulkan_core::{
+    Config, Deployment, DeploymentStatus, LaunchOptions, Preset, launch, state::StateStore,
+};
 use native_windows_derive::NwgUi;
 use native_windows_gui as nwg;
 use native_windows_gui::NativeUi;
@@ -79,7 +82,7 @@ pub struct MsfsVulkanApp {
     #[nwg_events( OnButtonClick: [MsfsVulkanApp::apply_config] )]
     btn_apply: nwg::Button,
 
-    #[nwg_control(parent: config_frame, text: "Selections are saved to msfs-vulkan.toml", size: (372, 22), position: (16, 352), font: Some(&data.font_caption), flags: "VISIBLE|DISABLED")]
+    #[nwg_control(parent: config_frame, text: "Selections are saved in AppData", size: (372, 22), position: (16, 352), font: Some(&data.font_caption), flags: "VISIBLE|DISABLED")]
     lbl_config_saved: nwg::Label,
 
     // --- Actions card ---
@@ -124,8 +127,57 @@ impl MsfsVulkanApp {
         nwg::stop_thread_dispatch();
     }
 
-    fn config_path() -> PathBuf {
-        PathBuf::from("msfs-vulkan.toml")
+    fn config_path() -> Result<PathBuf> {
+        msfs_vulkan_core::config::default_config_path()
+    }
+
+    fn payload_dir() -> Result<PathBuf> {
+        msfs_vulkan_core::config::default_payload_dir()
+    }
+
+    fn load_saved_config() -> Result<Option<Config>> {
+        let config_path = Self::config_path()?;
+        if config_path.is_file() {
+            return Config::load(&config_path).map(Some);
+        }
+
+        let legacy_path = msfs_vulkan_core::config::legacy_config_path();
+        if legacy_path.is_file() {
+            let config = Config::load(&legacy_path)?;
+            config.save(&config_path).with_context(|| {
+                format!(
+                    "failed to migrate configuration to {}",
+                    config_path.display()
+                )
+            })?;
+            return Ok(Some(config));
+        }
+
+        Ok(None)
+    }
+
+    fn config_from_saved_deployment() -> Result<Option<Config>> {
+        match StateStore::known_game_dirs()?.as_slice() {
+            [] => Ok(None),
+            [game_dir] => {
+                let config = Config::new(game_dir.clone(), Self::payload_dir()?);
+                config.save(&Self::config_path()?)?;
+                Ok(Some(config))
+            }
+            _ => {
+                bail!("multiple saved deployments found; apply configuration to choose one")
+            }
+        }
+    }
+
+    fn load_config_or_recover() -> Result<Config> {
+        if let Some(config) = Self::load_saved_config()? {
+            return Ok(config);
+        }
+        if let Some(config) = Self::config_from_saved_deployment()? {
+            return Ok(config);
+        }
+        bail!("configuration not found; apply configuration first")
     }
 
     fn apply_config(&self) {
@@ -149,8 +201,18 @@ impl MsfsVulkanApp {
 
         let selected_idx = self.combo_install.selection().unwrap_or(0);
         if let Some(installation) = installations.get(selected_idx) {
-            let mut config =
-                Config::new(installation.game_dir.clone(), PathBuf::from("runtime/x64"));
+            let payload_dir = match Self::payload_dir() {
+                Ok(path) => path,
+                Err(e) => {
+                    nwg::modal_error_message(
+                        &self.window,
+                        "Error",
+                        &format!("Failed to resolve AppData path:\n{e}"),
+                    );
+                    return;
+                }
+            };
+            let mut config = Config::new(installation.game_dir.clone(), payload_dir);
             config.environment = preset.environment();
 
             config.vkd3d_repo = Self::selected_repository(
@@ -164,7 +226,19 @@ impl MsfsVulkanApp {
                 msfs_vulkan_core::config::DEFAULT_DXVK_REPO,
             );
 
-            if let Err(e) = config.save(&Self::config_path()) {
+            let config_path = match Self::config_path() {
+                Ok(path) => path,
+                Err(e) => {
+                    nwg::modal_error_message(
+                        &self.window,
+                        "Error",
+                        &format!("Failed to resolve config path:\n{e}"),
+                    );
+                    return;
+                }
+            };
+
+            if let Err(e) = config.save(&config_path) {
                 nwg::modal_error_message(
                     &self.window,
                     "Error",
@@ -186,7 +260,10 @@ impl MsfsVulkanApp {
     }
 
     fn on_init(&self) {
-        let saved_config = Config::load(&Self::config_path()).ok();
+        let saved_config = Self::load_saved_config()
+            .ok()
+            .flatten()
+            .or_else(|| Self::config_from_saved_deployment().ok().flatten());
         let configured_vkd3d = saved_config
             .as_ref()
             .map_or(msfs_vulkan_core::config::DEFAULT_VKD3D_REPO, |config| {
@@ -212,6 +289,7 @@ impl MsfsVulkanApp {
 
         match msfs_vulkan_core::discover_installations() {
             Ok(found) => {
+                let saved_game_dir = saved_config.as_ref().map(|config| config.game_dir.clone());
                 let labels: Vec<String> = found
                     .iter()
                     .map(|inst| {
@@ -232,7 +310,15 @@ impl MsfsVulkanApp {
                     self.combo_install.push(label.clone());
                 }
                 if !labels.is_empty() {
-                    self.combo_install.set_selection(Some(0));
+                    let selected = saved_game_dir
+                        .as_ref()
+                        .and_then(|game_dir| {
+                            found
+                                .iter()
+                                .position(|installation| &installation.game_dir == game_dir)
+                        })
+                        .unwrap_or(0);
+                    self.combo_install.set_selection(Some(selected));
                 }
 
                 *self.installations.borrow_mut() = found;
@@ -287,30 +373,23 @@ impl MsfsVulkanApp {
     }
 
     fn refresh_deployment_status(&self) {
-        let status = Config::load(&Self::config_path())
-            .and_then(|config| Deployment::new(&config)?.status());
+        let status = Self::load_config_or_recover().and_then(|config| {
+            let deployment = Deployment::new(&config)?;
+            deployment.status()
+        });
         let text = match status {
-            Ok(msfs_vulkan_core::DeploymentStatus::Installed { .. }) => "Status: installed",
-            Ok(msfs_vulkan_core::DeploymentStatus::NotInstalled) => "Status: not installed",
-            Ok(msfs_vulkan_core::DeploymentStatus::Drifted { .. }) => "Status: needs attention",
+            Ok(DeploymentStatus::Installed { .. }) => "Status: installed",
+            Ok(DeploymentStatus::NotInstalled) => "Status: not installed",
+            Ok(DeploymentStatus::Drifted { .. }) => "Status: needs attention",
             Err(_) => "Status: not configured",
         };
         self.lbl_deployment_status.set_text(text);
     }
 
     fn install(&self) {
-        let path = Self::config_path();
-        if !path.exists() {
-            nwg::modal_error_message(
-                &self.window,
-                "Error",
-                "Configuration not found. Please click 'Apply Configuration' first.",
-            );
-            return;
-        }
         self.lbl_status
             .set_text("Preparing the Vulkan runtime. This can take a moment...");
-        match Config::load(&path) {
+        match Self::load_config_or_recover() {
             Ok(config) => {
                 if let Err(e) = msfs_vulkan_core::download::ensure_runtime(&config) {
                     nwg::modal_error_message(
@@ -360,30 +439,40 @@ impl MsfsVulkanApp {
     }
 
     fn restore(&self) {
-        let path = Self::config_path();
-        if !path.exists() {
-            nwg::modal_error_message(&self.window, "Error", "Configuration not found.");
-            return;
-        }
-        match Config::load(&path) {
+        match Self::load_config_or_recover() {
             Ok(config) => match Deployment::new(&config) {
                 Ok(deployment) => {
                     if let Err(e) = deployment.restore(false) {
-                        nwg::modal_error_message(
-                            &self.window,
-                            "Error",
-                            &format!("Failed to restore:\n{e}"),
+                        let message = format!(
+                            "Normal restore failed:\n{e}\n\nForce restore using saved backups?"
                         );
-                    } else {
-                        self.lbl_status
-                            .set_text("Original DirectX files restored successfully.");
-                        self.refresh_deployment_status();
-                        nwg::modal_info_message(
-                            &self.window,
-                            "Success",
-                            "Original files restored successfully.",
-                        );
+                        let params = nwg::MessageParams {
+                            title: "Force restore?",
+                            content: &message,
+                            buttons: nwg::MessageButtons::YesNo,
+                            icons: nwg::MessageIcons::Warning,
+                        };
+                        if nwg::modal_message(&self.window, &params) == nwg::MessageChoice::Yes {
+                            if let Err(e) = deployment.restore(true) {
+                                nwg::modal_error_message(
+                                    &self.window,
+                                    "Error",
+                                    &format!("Failed to force restore:\n{e}"),
+                                );
+                                return;
+                            }
+                        } else {
+                            return;
+                        }
                     }
+                    self.lbl_status
+                        .set_text("Original DirectX files restored successfully.");
+                    self.refresh_deployment_status();
+                    nwg::modal_info_message(
+                        &self.window,
+                        "Success",
+                        "Original files restored successfully.",
+                    );
                 }
                 Err(e) => {
                     nwg::modal_error_message(
@@ -404,16 +493,7 @@ impl MsfsVulkanApp {
     }
 
     fn run(&self) {
-        let path = Self::config_path();
-        if !path.exists() {
-            nwg::modal_error_message(
-                &self.window,
-                "Error",
-                "Configuration not found. Please configure and install first.",
-            );
-            return;
-        }
-        match Config::load(&path) {
+        match Self::load_config_or_recover() {
             Ok(config) => {
                 let options = LaunchOptions {
                     arguments: vec![],

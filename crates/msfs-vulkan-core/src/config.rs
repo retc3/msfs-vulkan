@@ -3,7 +3,8 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result, anyhow, bail};
+use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -43,6 +44,7 @@ impl Preset {
 }
 
 pub const CURRENT_SCHEMA_VERSION: u32 = 1;
+pub const CONFIG_FILE_NAME: &str = "msfs-vulkan.toml";
 pub const DEFAULT_EXECUTABLE: &str = "FlightSimulator2024.exe";
 pub const DEFAULT_VKD3D_REPO: &str = "HansKristian-Work/vkd3d-proton";
 pub const DEFAULT_DXVK_REPO: &str = "doitsujin/dxvk";
@@ -53,6 +55,39 @@ pub const VKD3D_REPOSITORY_PRESETS: &[(&str, &str)] =
 
 /// Repository choices exposed by the GUI. Custom values remain supported through TOML.
 pub const DXVK_REPOSITORY_PRESETS: &[(&str, &str)] = &[("Official DXVK", DEFAULT_DXVK_REPO)];
+
+/// Resolve the app-local data directory used for persistent config, state, logs, and runtime files.
+///
+/// # Errors
+///
+/// Returns an error when the platform has no local application data directory.
+pub fn app_data_dir() -> Result<PathBuf> {
+    let project_dirs = ProjectDirs::from("dev", "msfs-vulkan", "msfs-vulkan")
+        .ok_or_else(|| anyhow!("could not determine the local application data directory"))?;
+    Ok(project_dirs.data_local_dir().to_path_buf())
+}
+
+/// Resolve the persistent default config path.
+///
+/// # Errors
+///
+/// Returns an error when the platform has no local application data directory.
+pub fn default_config_path() -> Result<PathBuf> {
+    Ok(app_data_dir()?.join(CONFIG_FILE_NAME))
+}
+
+pub fn legacy_config_path() -> PathBuf {
+    PathBuf::from(CONFIG_FILE_NAME)
+}
+
+/// Resolve the default persistent runtime payload directory.
+///
+/// # Errors
+///
+/// Returns an error when the platform has no local application data directory.
+pub fn default_payload_dir() -> Result<PathBuf> {
+    Ok(app_data_dir()?.join("runtime").join("x64"))
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]

@@ -1,17 +1,18 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 use clap::{Args, Parser, Subcommand};
 use msfs_vulkan_core::{
     Config, Deployment, DeploymentStatus, LaunchOptions, Preset, discover_installations, launch,
+    state::StateStore,
 };
 
 #[derive(Debug, Parser)]
 #[command(name = "msfs-vulkan", version, about)]
 struct Cli {
     /// Configuration file used by commands that operate on the game.
-    #[arg(long, global = true, default_value = "msfs-vulkan.toml")]
-    config: PathBuf,
+    #[arg(long, global = true)]
+    config: Option<PathBuf>,
 
     #[command(subcommand)]
     command: Command,
@@ -110,12 +111,13 @@ fn main() {
 
 fn run() -> Result<()> {
     let cli = Cli::parse();
+    let config_path = resolve_config_path(cli.config)?;
     match cli.command {
         Command::Discover(output) => discover(output.json),
-        Command::Init(args) => init(&cli.config, args),
+        Command::Init(args) => init(&config_path, args),
         Command::Probe(output) => probe(output.json),
         Command::Install => {
-            let config = Config::load(&cli.config)?;
+            let config = load_config_or_recover(&config_path)?;
             println!("Ensuring translation runtime is downloaded...");
             msfs_vulkan_core::download::ensure_runtime(&config)?;
             Deployment::new(&config)?.install()?;
@@ -126,12 +128,12 @@ fn run() -> Result<()> {
             Ok(())
         }
         Command::Status(output) => {
-            let config = Config::load(&cli.config)?;
+            let config = load_config_or_recover(&config_path)?;
             let status = Deployment::new(&config)?.status()?;
             print_status(&status, output.json)
         }
         Command::Run(args) => {
-            let config = Config::load(&cli.config)?;
+            let config = load_config_or_recover(&config_path)?;
             let result = launch(
                 &config,
                 &LaunchOptions {
@@ -149,10 +151,54 @@ fn run() -> Result<()> {
             Ok(())
         }
         Command::Restore(args) => {
-            let config = Config::load(&cli.config)?;
+            let config = load_config_or_recover(&config_path)?;
             Deployment::new(&config)?.restore(args.force)?;
             println!("restored original files in {}", config.game_dir.display());
             Ok(())
+        }
+    }
+}
+
+fn resolve_config_path(path: Option<PathBuf>) -> Result<PathBuf> {
+    path.map_or_else(msfs_vulkan_core::config::default_config_path, Ok)
+}
+
+fn load_config_or_recover(path: &Path) -> Result<Config> {
+    if path.is_file() {
+        return Config::load(path);
+    }
+
+    let default_path = msfs_vulkan_core::config::default_config_path()?;
+    let legacy_path = msfs_vulkan_core::config::legacy_config_path();
+    if path == default_path && legacy_path.is_file() {
+        let config = Config::load(&legacy_path)?;
+        config
+            .save(path)
+            .with_context(|| format!("failed to migrate configuration to {}", path.display()))?;
+        return Ok(config);
+    }
+
+    if path == default_path {
+        let config = config_from_saved_deployment()?
+            .with_context(|| format!("configuration not found: {}", path.display()))?;
+        config
+            .save(path)
+            .with_context(|| format!("failed to recover configuration to {}", path.display()))?;
+        return Ok(config);
+    }
+
+    Config::load(path)
+}
+
+fn config_from_saved_deployment() -> Result<Option<Config>> {
+    match StateStore::known_game_dirs()?.as_slice() {
+        [] => Ok(None),
+        [game_dir] => Ok(Some(Config::new(
+            game_dir.clone(),
+            msfs_vulkan_core::config::default_payload_dir()?,
+        ))),
+        _ => {
+            bail!("multiple saved deployments found; provide --config or run init")
         }
     }
 }
