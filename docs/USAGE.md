@@ -1,74 +1,73 @@
 # Usage Guide
 
-Getting started with `msfs-vulkan` is super simple. We've built both a friendly Windows GUI and a powerful command-line interface, so you can use whichever you prefer!
+Using `msfs-vulkan` is pretty easy, You can use the GUI or a CLI, Whichever you like!
 
 ## What you'll need
 
-- Windows 10 or 11.
-- Rust 1.85 or newer (with the MSVC toolchain) if you're compiling from scratch.
-- A decently updated GPU driver that supports Vulkan 1.3 or higher.
-- A copy of Microsoft Flight Simulator (2020 or 2024) installed via Steam or the Xbox app.
+- Windows 11/10 (Minimum Windows 10 v1909)
+- Rust 1.85 and up with the MSVC toolchain if you're looking to compile this.
+- A GPU that supports Vulkan 1.3 or higher. You may simply have to update your Drivers to meet this requirement
+- Microsoft Flight Simulator 2020/2024 from Steam or the Microsoft Store/Xbox App
 
-*(Note: You don't need to manually download the translation DLLs anymore! The tool handles that for you.)*
 
-## Using the GUI (Recommended)
+## GUI (Recommended for basic users)
 
-If you just want to get in and play, this is the way to go:
+If you just wanna try it out via the GUI like most people
 
-1. Fire up `msfs-vulkan-gui.exe`.
-2. Pick a **Configuration Preset** that matches your rig (Quality, Balanced, or Performance).
-3. Hit **Apply Configuration** to generate your settings.
-4. Click **Install Translation Layer**. Sit back for a few seconds while the tool automatically downloads the necessary VKD3D-Proton and DXVK files from GitHub and puts them right where they need to be.
-5. Click **Run MSFS 2020 / 2024** and cross your fingers!
-6. **Important:** When you're done testing, completely close the game, then click **Restore Original Files** to safely clean up the translation layer and return your game back to normal.
+1. Run `msfs-vulkan-gui.exe` from the latest release
+2. Select a **Configuration Preset** for your rig, e.g if you have a mid range from 6 years ago, select Performance, High end from 5 years ago Balanced and so on.
+3. Click **Apply Configuration**
+4. Click **Install Translation Layers** as this project doesn't come with them. Wait while your PC installs them from their Github repos. `msfs-vulkan` will not work without these installed. If installed the status in the GUI will change to Installed and then you may move on.
+5. Click **Run Flight Simulator** and wait for the game to launch. if it throws a error, Make a issue in the Github.
+6. **Important:** When you're finished testing, Click **Restore Original Files** to remove the translation layers and restore your sim to DirectX 12/11.
 
-## Using the CLI (For Power Users)
+## CLI (incase you're having issues with the GUI or like the Terminal)
 
-If you like living in the terminal, we've got you covered.
+If you'd like to use the terminal instead or are having issues with the GUI,
 
-### 1. Build and check your system
-First, compile the tool and run a quick probe to see if your GPU is ready for Vulkan:
+### 1. Build and verify your system meets the Vulkan 1.3 requirement
+Compile the tool and verify your system meets the Vulkan 1.3 requirement via the commands listed.
 ```powershell
 cargo build --release
 target\release\msfs-vulkan.exe probe
 target\release\msfs-vulkan.exe discover
 ```
 
-### 2. Set up your config
-Let's generate your local `msfs-vulkan.toml` configuration file. If you only have one MSFS installation, it's totally automatic:
+### 2. Set your Configuration.
+To generate your `msfs-vulkan.toml` configuration file, You must run this command. If you only have one Installation of MSFS this is automatic
 ```powershell
 target\release\msfs-vulkan.exe init
 ```
 
-If you have multiple installs or it can't find it, just point it to your game folder directly:
+Although if you have multiple installs or `msfs-vulkan-core` cannot find it you can use the `--game-dir` command to point it to your install.
 ```powershell
 target\release\msfs-vulkan.exe init --game-dir 'C:\XboxGames\Microsoft Flight Simulator 2024\Content'
 ```
-*(Feel free to open up `msfs-vulkan.toml` and tweak it before you install!)*
+*(As long as you know what you're doing, You may feel free to open `msfs-vulkan.toml` and tweak it before installation)*
 
-### 3. Install, Run, and Restore
-*Make sure MSFS is closed before doing this!*
+### 3. Installing, Running, and Restoring original files.
+*Make sure MSFS is closed before starting, Check Task Manager incase `FlightSimulator.exe` is open in the background.*
 
-To install the translation layer (it will automatically download the required GitHub releases if they are missing):
+To start installation of the translation layer, If you're missing the releases required it'll automatically install them for you.
 ```powershell
 target\release\msfs-vulkan.exe install
 ```
 
-To check if everything was copied correctly:
+To make sure it was installed correctly you'll need to run this before starting MSFS
 ```powershell
 target\release\msfs-vulkan.exe status
 ```
 
-Time to fly! 
+Running  MSFS with `msfs-vulkan` installed
 ```powershell
 target\release\msfs-vulkan.exe run
 ```
-*(Pro-tip: Use `run --wait -- -SomeGameArgument` if you want to pass launch options directly to the game and wait for it to close.)*
+*(Use `run --wait -- -yourgamearguement if you want to pass arguments to MSFS directly and then wait for it to close.)*
 
-Once you're done, safely restore your original files:
+If you'd like to uninstall `msfs-vulkan` from MSFS use this command.
 ```powershell
 target\release\msfs-vulkan.exe restore
 ```
 
-### Where are my logs?
-We keep your repository totally clean! All generated logs, shader caches, deployment states, and the crucial backups of your original game files are tucked safely away in your local AppData directory.
+### Where are the logs?
+All logs are stored in `Appdata/Local/msfs-vulkan/data/profiles` This includes Shader caches, Deployment states, and the backup of your game files.
