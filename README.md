@@ -4,9 +4,9 @@
 > **WARNING!**
 > `msfs-vulkan` is highly experimental, do not expect it to increase performance, Just because your GPU supports vulkan doesn't mean msfs-vulkan will work, MSFS may also be highly unstable while you're using msfs-vulkan. You accept the risk that your install of MSFS could be corrupted by this tool by installing it. You'll also probably see artifacting caused by the tool or crash mid way through a 14 hour flight.
 
-Welcome to `msfs-vulkan`! This is an experimental testing tool we built to see what happens when we run Microsoft Flight Simulator 2020 and 2024 using the Vulkan API instead of DirectX. 
+Welcome!`msfs-vulkan` is a translation layer to make MSFS2020/2024's DirectX 12 calls into Vulkan,
 
-How does it work? We don't actually rewrite the game's D3D12 engine. Instead, we use translation layers - specifically [VKD3D-Proton](https://github.com/HansKristian-Work/vkd3d-proton) and [DXVK](https://github.com/doitsujin/dxvk) - to intercept the game's D3D12 calls and translate them into Vulkan on the fly. This tool handles grabbing those DLLs, backing up your game files, launching the sim, and making sure everything gets restored to normal when you're done.
+It works by using translation layers [KD3D-Proton](https://github.com/HansKristian-Work/vkd3d-protonand) and [DXVK](https://github.com/doitsujin/dxvkto) to take the MSFS DirectX calls and translate them into Vulkan calls, This may help performance on Linux systems and some low spec systems. You can restore the original MSFS files via the CLI or the GUI.
 
 ## What's in the box?
 
