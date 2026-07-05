@@ -7,7 +7,10 @@ use anyhow::{Context, Result};
 use serde::Serialize;
 
 #[cfg(windows)]
-use winreg::{RegKey, enums::*};
+use winreg::{
+    RegKey,
+    enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE},
+};
 
 const MSFS_2024_APP_ID: &str = "2537590";
 const MSFS_2020_APP_ID: &str = "1250410";
