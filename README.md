@@ -4,7 +4,7 @@
 > **WARNING!**
 > `msfs-vulkan` is highly experimental, do not expect it to increase performance, Just because your GPU supports Vulkan doesn't mean msfs-vulkan will work, MSFS may also be highly unstable while you're using msfs-vulkan. You accept the risk that your install of MSFS could be corrupted by this tool by installing it. You'll also probably see artifacting caused by the tool or crash mid way through a 14 hour flight.
 
-> [!CAUTION]
+> [!WARNING]
 > This is a warning, `msfs-vulkan` due to graphical glitches, MSFS may flash blue or other colors. this may trigger photosensitive epilepsy, Do not run `msfs-vulkan` if you have this condition for your own safety
 
 Welcome!`msfs-vulkan` is a translation layer to make MSFS2020/2024's DirectX 12 calls into Vulkan,
