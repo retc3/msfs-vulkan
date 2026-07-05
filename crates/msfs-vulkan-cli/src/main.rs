@@ -36,7 +36,7 @@ impl From<PresetArg> for Preset {
 
 #[derive(Debug, Subcommand)]
 enum Command {
-    /// Find Steam installations of Microsoft Flight Simulator 2024.
+    /// Find Microsoft Flight Simulator installations.
     Discover(OutputArgs),
     /// Create a configuration file.
     Init(InitArgs),
@@ -162,7 +162,7 @@ fn discover(json: bool) -> Result<()> {
     if json {
         println!("{}", serde_json::to_string_pretty(&installations)?);
     } else if installations.is_empty() {
-        println!("no Steam installation was found");
+        println!("no installation was found");
     } else {
         for installation in installations {
             println!(
