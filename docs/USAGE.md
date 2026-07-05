@@ -21,7 +21,7 @@ If you just wanna try it out via the GUI like most people
 5. Click **Run Flight Simulator** and wait for the game to launch. if it throws a error, Make a issue in the Github.
 6. **Important:** When you're finished testing, Click **Restore Original Files** to remove the translation layers and restore your sim to DirectX 12/11.
 
-## CLI (incase you're having issues with the GUI or like the Terminal)
+## CLI (incase you're having issues with the GUI or would like the Terminal instead)
 
 If you'd like to use the terminal instead or are having issues with the GUI,
 
