@@ -14,7 +14,7 @@ It works by using translation layers: [KD3D-Proton](https://github.com/HansKrist
 
 - `msfs-vulkan-gui`: A friendly Graphics interface for those who like GUI's instead of Terminals.
 - `msfs-vulkan-cli`: The CLI version, You'll need to call it within the Terminal
-- `msfs-vulkan-core`: As the name suggests, it's the main core of `msfs-vulkan`, without it non of this would work at all.
+- `msfs-vulkan-core`: As the name suggests, it's the main core of `msfs-vulkan`, without it none of this would work at all.
 - `msfs-vulkan-vulkan`: A tiny probe to check if your GPU can use Vulkan or not.
   
 *The repos used in this project are installed by the tool, this repo does not have them.*
