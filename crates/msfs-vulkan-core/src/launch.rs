@@ -70,9 +70,8 @@ pub fn launch(config: &Config, options: &LaunchOptions) -> Result<LaunchResult> 
     let debug_log_dir = if options.debug {
         let dir = store.log_dir().join(format!("{stamp}-debug"));
         fs::create_dir_all(&dir)?;
-        fs::write(&debug_conf, format!("log_dir={}\n", dir.display())).with_context(|| {
-            format!("failed to write debug trigger {}", debug_conf.display())
-        })?;
+        fs::write(&debug_conf, format!("log_dir={}\n", dir.display()))
+            .with_context(|| format!("failed to write debug trigger {}", debug_conf.display()))?;
         Some(dir)
     } else {
         if debug_conf.exists() {
