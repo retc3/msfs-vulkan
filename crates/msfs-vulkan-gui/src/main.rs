@@ -411,15 +411,15 @@ impl MsfsVulkanApp {
             Ok(DeploymentStatus::Drifted { .. }) => "Status: needs attention",
             Err(_) => "Status: not configured",
         };
-    self.lbl_deployment_status.set_text(text);
+        self.lbl_deployment_status.set_text(text);
 
-    self.btn_install.set_text(if installed {
-        "Reinstall translation layer"
-    } else {
-        "Install translation layer"
-    });
+        self.btn_install.set_text(if installed {
+            "Reinstall translation layer"
+        } else {
+            "Install translation layer"
+        });
 
-    self.refresh_debug_button();
+        self.refresh_debug_button();
     }
 
     /// "Start with Debugging Options" only works with sources that support
