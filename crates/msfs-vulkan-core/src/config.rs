@@ -49,6 +49,19 @@ pub const DEFAULT_EXECUTABLE: &str = "FlightSimulator2024.exe";
 pub const DEFAULT_VKD3D_REPO: &str = "HansKristian-Work/vkd3d-proton";
 pub const DEFAULT_DXVK_REPO: &str = "doitsujin/dxvk";
 
+/// Repositories whose builds support env-var-free debug logging (the tailored
+/// forks that read msfs-vulkan-debug.conf). MSFS blocks env vars, so only these
+/// can produce logs on demand; the GUI enables "Start with Debugging Options"
+/// only when both selected sources are debug-capable. Extend as forks are added.
+pub const DEBUG_CAPABLE_REPOS: &[&str] = &["retc3/msfs-vkd3d", "retc3/msfs-dxvk"];
+
+/// Whether a repository slug supports env-var-free debug logging.
+pub fn repo_supports_debug(repo: &str) -> bool {
+    DEBUG_CAPABLE_REPOS
+        .iter()
+        .any(|candidate| candidate.eq_ignore_ascii_case(repo))
+}
+
 /// Repository choices exposed by the GUI. Custom values remain supported through TOML.
 pub const VKD3D_REPOSITORY_PRESETS: &[(&str, &str)] = &[
     ("Official VKD3D-Proton", DEFAULT_VKD3D_REPO),

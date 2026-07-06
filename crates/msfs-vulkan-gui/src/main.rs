@@ -2,7 +2,8 @@
 
 use anyhow::{Context, Result, bail};
 use msfs_vulkan_core::{
-    Config, Deployment, DeploymentStatus, LaunchOptions, Preset, launch, state::StateStore,
+    Config, Deployment, DeploymentStatus, LaunchOptions, Preset, config::repo_supports_debug,
+    launch, state::StateStore,
 };
 use native_windows_derive::NwgUi;
 use native_windows_gui as nwg;
@@ -95,22 +96,26 @@ pub struct MsfsVulkanApp {
     #[nwg_control(parent: actions_frame, text: "Apply the runtime, launch the sim, or return to native DirectX.", size: (178, 52), position: (16, 38), font: Some(&data.font_caption), flags: "VISIBLE|DISABLED")]
     lbl_actions_hint: nwg::Label,
 
-    #[nwg_control(parent: actions_frame, text: "Install translation layer", size: (178, 42), position: (16, 102))]
+    #[nwg_control(parent: actions_frame, text: "Install translation layer", size: (178, 40), position: (16, 98))]
     #[nwg_events( OnButtonClick: [MsfsVulkanApp::install] )]
     btn_install: nwg::Button,
 
-    #[nwg_control(parent: actions_frame, text: "Run Flight Simulator", size: (178, 42), position: (16, 154))]
+    #[nwg_control(parent: actions_frame, text: "Run Flight Simulator", size: (178, 40), position: (16, 142))]
     #[nwg_events( OnButtonClick: [MsfsVulkanApp::run] )]
     btn_run: nwg::Button,
 
-    #[nwg_control(parent: actions_frame, text: "", size: (178, 1), position: (16, 216), background_color: Some([205, 205, 205]))]
+    #[nwg_control(parent: actions_frame, text: "Start with Debugging Options", size: (178, 40), position: (16, 186))]
+    #[nwg_events( OnButtonClick: [MsfsVulkanApp::run_debug] )]
+    btn_debug: nwg::Button,
+
+    #[nwg_control(parent: actions_frame, text: "", size: (178, 1), position: (16, 232), background_color: Some([205, 205, 205]))]
     action_separator: nwg::Label,
 
-    #[nwg_control(parent: actions_frame, text: "Restore original files", size: (178, 36), position: (16, 232))]
+    #[nwg_control(parent: actions_frame, text: "Restore original files", size: (178, 36), position: (16, 242))]
     #[nwg_events( OnButtonClick: [MsfsVulkanApp::restore] )]
     btn_restore: nwg::Button,
 
-    #[nwg_control(parent: actions_frame, text: "Restore before game updates or file verification.", size: (178, 50), position: (16, 278), font: Some(&data.font_caption), flags: "VISIBLE|DISABLED")]
+    #[nwg_control(parent: actions_frame, text: "Restore before game updates or file verification.", size: (178, 46), position: (16, 284), font: Some(&data.font_caption), flags: "VISIBLE|DISABLED")]
     lbl_restore_hint: nwg::Label,
 
     #[nwg_control(parent: actions_frame, text: "Status: not checked", size: (178, 36), position: (16, 336), h_align: nwg::HTextAlign::Center, background_color: Some([242, 242, 242]))]
@@ -384,6 +389,19 @@ impl MsfsVulkanApp {
             Err(_) => "Status: not configured",
         };
         self.lbl_deployment_status.set_text(text);
+        self.refresh_debug_button();
+    }
+
+    /// "Start with Debugging Options" only works with sources that support
+    /// env-var-free logging (the tailored forks). Disable it otherwise, since
+    /// MSFS won't inherit VKD3D_DEBUG/DXVK_LOG_LEVEL.
+    fn refresh_debug_button(&self) {
+        let supported = Self::load_config_or_recover()
+            .map(|config| {
+                repo_supports_debug(&config.vkd3d_repo) && repo_supports_debug(&config.dxvk_repo)
+            })
+            .unwrap_or(false);
+        self.btn_debug.set_enabled(supported);
     }
 
     fn install(&self) {
@@ -493,12 +511,21 @@ impl MsfsVulkanApp {
     }
 
     fn run(&self) {
+        self.launch_sim(false);
+    }
+
+    fn run_debug(&self) {
+        self.launch_sim(true);
+    }
+
+    fn launch_sim(&self, debug: bool) {
         match Self::load_config_or_recover() {
             Ok(config) => {
                 let options = LaunchOptions {
                     arguments: vec![],
                     wait: false,
                     allow_uninstalled: false,
+                    debug,
                 };
                 match launch(&config, &options) {
                     Ok(result) => {
@@ -506,11 +533,14 @@ impl MsfsVulkanApp {
                             "Flight Simulator started with process ID {}.",
                             result.process_id
                         ));
-                        nwg::modal_info_message(
-                            &self.window,
-                            "Success",
-                            &format!("Started MSFS (PID: {})", result.process_id),
-                        );
+                        let mut message = format!("Started MSFS (PID: {})", result.process_id);
+                        if let Some(dir) = &result.debug_log_dir {
+                            message.push_str(&format!(
+                                "\n\nDebug logging is on. Logs will appear in:\n{}",
+                                dir.display()
+                            ));
+                        }
+                        nwg::modal_info_message(&self.window, "Success", &message);
                     }
                     Err(e) => {
                         nwg::modal_error_message(

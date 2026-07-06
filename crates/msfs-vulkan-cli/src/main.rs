@@ -90,6 +90,9 @@ struct RunArgs {
     /// Permit a baseline launch without an installed translation layer.
     #[arg(long)]
     allow_uninstalled: bool,
+    /// Enable full env-var-free debug logging (tailored vkd3d/dxvk builds only).
+    #[arg(long)]
+    debug: bool,
     /// Arguments passed to FlightSimulator2024.exe.
     #[arg(last = true)]
     arguments: Vec<String>,
@@ -140,6 +143,7 @@ fn run() -> Result<()> {
                     arguments: args.arguments,
                     wait: args.wait,
                     allow_uninstalled: args.allow_uninstalled,
+                    debug: args.debug,
                 },
             )?;
             println!("started process {}", result.process_id);
@@ -148,6 +152,9 @@ fn run() -> Result<()> {
             }
             println!("stdout: {}", result.stdout_log.display());
             println!("stderr: {}", result.stderr_log.display());
+            if let Some(dir) = &result.debug_log_dir {
+                println!("debug logs: {}", dir.display());
+            }
             Ok(())
         }
         Command::Restore(args) => {
