@@ -72,6 +72,9 @@ pub const VKD3D_REPOSITORY_PRESETS: &[(&str, &str)] = &[
 pub const DXVK_REPOSITORY_PRESETS: &[(&str, &str)] = &[
     ("Official DXVK", DEFAULT_DXVK_REPO),
     ("MSFS Tailored DXVK", "retc3/msfs-dxvk"),
+    // DXVK 2.7 based build for GPUs whose Vulkan driver can't satisfy the
+    // DXVK 3.x rewrite's requirements (Intel iGPUs on Windows, mostly).
+    ("MSFS Tailored DXVK (compat, Intel)", "retc3/msfs-dxvk-compat-2.7"),
 ];
 
 /// Resolve the app-local data directory used for persistent config, state, logs, and runtime files.
