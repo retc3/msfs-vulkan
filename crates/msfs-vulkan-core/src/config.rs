@@ -53,7 +53,11 @@ pub const DEFAULT_DXVK_REPO: &str = "doitsujin/dxvk";
 /// forks that read msfs-vulkan-debug.conf). MSFS blocks env vars, so only these
 /// can produce logs on demand; the GUI enables "Start with Debugging Options"
 /// only when both selected sources are debug-capable. Extend as forks are added.
-pub const DEBUG_CAPABLE_REPOS: &[&str] = &["retc3/msfs-vkd3d", "retc3/msfs-dxvk"];
+pub const DEBUG_CAPABLE_REPOS: &[&str] = &[
+    "retc3/msfs-vkd3d",
+    "retc3/msfs-dxvk",
+    "retc3/msfs-dxvk-compat-2.7",
+];
 
 /// Whether a repository slug supports env-var-free debug logging.
 pub fn repo_supports_debug(repo: &str) -> bool {
