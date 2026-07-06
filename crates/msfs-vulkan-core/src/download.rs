@@ -4,7 +4,7 @@ use std::path::Path;
 
 use anyhow::{Context, Result, bail};
 use flate2::read::GzDecoder;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tar::Archive;
 use ureq;
 use zstd::stream::read::Decoder as ZstdDecoder;
@@ -20,6 +20,21 @@ struct GitHubAsset {
     browser_download_url: String,
 }
 
+const RUNTIME_MANIFEST_FILE: &str = "runtime-manifest.json";
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(default, rename_all = "kebab-case")]
+struct RuntimeManifest {
+    vkd3d_repo: Option<String>,
+    dxvk_repo: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum RuntimeComponent {
+    Vkd3d,
+    Dxvk,
+}
+
 /// Ensures the Vulkan runtime files are available in the configured runtime directory.
 ///
 /// # Errors
@@ -27,29 +42,75 @@ struct GitHubAsset {
 /// Returns an error if the runtime directory cannot be created, or if a runtime
 /// component cannot be downloaded, read, extracted, or written.
 pub fn ensure_runtime(config: &crate::Config) -> Result<()> {
+    fs::create_dir_all(&config.payload_dir).context("failed to create payload directory")?;
+
+    let manifest_path = config.payload_dir.join(RUNTIME_MANIFEST_FILE);
+    let mut manifest = read_runtime_manifest(&manifest_path)?;
+
+    let mut has_vkd3d = false;
+    let mut has_dxvk = false;
     let mut missing_vkd3d = false;
     let mut missing_dxvk = false;
 
     for mapping in &config.files {
         let path = config.payload_dir.join(&mapping.source);
-        if !path.exists() {
-            let name = mapping.source.to_string_lossy().to_lowercase();
-            if name.contains("d3d12") {
-                missing_vkd3d = true;
-            } else if name.contains("dxgi") || name.contains("d3d11") {
-                missing_dxvk = true;
+        match component_for_path(&mapping.source) {
+            Some(RuntimeComponent::Vkd3d) => {
+                has_vkd3d = true;
+                missing_vkd3d |= !path.exists();
             }
+            Some(RuntimeComponent::Dxvk) => {
+                has_dxvk = true;
+                missing_dxvk |= !path.exists();
+            }
+            None => {}
         }
     }
 
-    if missing_vkd3d {
+    let vkd3d_source_changed =
+        has_vkd3d && manifest.vkd3d_repo.as_deref() != Some(config.vkd3d_repo.as_str());
+    let dxvk_source_changed =
+        has_dxvk && manifest.dxvk_repo.as_deref() != Some(config.dxvk_repo.as_str());
+
+    if missing_vkd3d || vkd3d_source_changed {
         download_and_extract(&config.vkd3d_repo, true, &config.payload_dir)?;
+        manifest.vkd3d_repo = Some(config.vkd3d_repo.clone());
     }
-    if missing_dxvk {
+    if missing_dxvk || dxvk_source_changed {
         download_and_extract(&config.dxvk_repo, false, &config.payload_dir)?;
+        manifest.dxvk_repo = Some(config.dxvk_repo.clone());
     }
 
-    Ok(())
+    write_runtime_manifest(&manifest_path, &manifest)
+}
+
+fn component_for_path(path: &Path) -> Option<RuntimeComponent> {
+    let name = path.to_string_lossy().to_lowercase();
+    if name.contains("d3d12") {
+        Some(RuntimeComponent::Vkd3d)
+    } else if name.contains("dxgi") || name.contains("d3d11") {
+        Some(RuntimeComponent::Dxvk)
+    } else {
+        None
+    }
+}
+
+fn read_runtime_manifest(path: &Path) -> Result<RuntimeManifest> {
+    if !path.is_file() {
+        return Ok(RuntimeManifest::default());
+    }
+
+    let bytes = fs::read(path)
+        .with_context(|| format!("failed to read runtime manifest {}", path.display()))?;
+    serde_json::from_slice(&bytes)
+        .with_context(|| format!("failed to parse runtime manifest {}", path.display()))
+}
+
+fn write_runtime_manifest(path: &Path, manifest: &RuntimeManifest) -> Result<()> {
+    let bytes =
+        serde_json::to_vec_pretty(manifest).context("failed to serialize runtime manifest")?;
+    fs::write(path, bytes)
+        .with_context(|| format!("failed to write runtime manifest {}", path.display()))
 }
 
 /// Downloads the latest release archive from a GitHub repository and extracts the required DLLs.
