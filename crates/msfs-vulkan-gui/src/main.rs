@@ -8,6 +8,7 @@ use msfs_vulkan_core::{
 use native_windows_derive::NwgUi;
 use native_windows_gui as nwg;
 use native_windows_gui::NativeUi;
+use std::fmt::Write as _;
 use std::path::PathBuf;
 
 #[derive(Default, NwgUi)]
@@ -394,13 +395,11 @@ impl MsfsVulkanApp {
 
     /// "Start with Debugging Options" only works with sources that support
     /// env-var-free logging (the tailored forks). Disable it otherwise, since
-    /// MSFS won't inherit VKD3D_DEBUG/DXVK_LOG_LEVEL.
+    /// MSFS won't inherit `VKD3D_DEBUG` / `DXVK_LOG_LEVEL`.
     fn refresh_debug_button(&self) {
-        let supported = Self::load_config_or_recover()
-            .map(|config| {
-                repo_supports_debug(&config.vkd3d_repo) && repo_supports_debug(&config.dxvk_repo)
-            })
-            .unwrap_or(false);
+        let supported = Self::load_config_or_recover().is_ok_and(|config| {
+            repo_supports_debug(&config.vkd3d_repo) && repo_supports_debug(&config.dxvk_repo)
+        });
         self.btn_debug.set_enabled(supported);
     }
 
@@ -533,13 +532,17 @@ impl MsfsVulkanApp {
                             "Flight Simulator started with process ID {}.",
                             result.process_id
                         ));
+
                         let mut message = format!("Started MSFS (PID: {})", result.process_id);
+
                         if let Some(dir) = &result.debug_log_dir {
-                            message.push_str(&format!(
+                            let _ = write!(
+                                message,
                                 "\n\nDebug logging is on. Logs will appear in:\n{}",
                                 dir.display()
-                            ));
+                            );
                         }
+
                         nwg::modal_info_message(&self.window, "Success", &message);
                     }
                     Err(e) => {
