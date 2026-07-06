@@ -11,6 +11,7 @@ use zstd::stream::read::Decoder as ZstdDecoder;
 
 #[derive(Deserialize)]
 struct GitHubRelease {
+    tag_name: String,
     assets: Vec<GitHubAsset>,
 }
 
@@ -22,11 +23,13 @@ struct GitHubAsset {
 
 const RUNTIME_MANIFEST_FILE: &str = "runtime-manifest.json";
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[serde(default, rename_all = "kebab-case")]
-struct RuntimeManifest {
-    vkd3d_repo: Option<String>,
-    dxvk_repo: Option<String>,
+pub struct RuntimeManifest {
+    pub vkd3d_repo: Option<String>,
+    pub dxvk_repo: Option<String>,
+    pub vkd3d_version: Option<String>,
+    pub dxvk_version: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -73,15 +76,77 @@ pub fn ensure_runtime(config: &crate::Config) -> Result<()> {
         has_dxvk && manifest.dxvk_repo.as_deref() != Some(config.dxvk_repo.as_str());
 
     if missing_vkd3d || vkd3d_source_changed {
-        download_and_extract(&config.vkd3d_repo, true, &config.payload_dir)?;
+        let tag = download_and_extract(&config.vkd3d_repo, true, &config.payload_dir)?;
         manifest.vkd3d_repo = Some(config.vkd3d_repo.clone());
+        manifest.vkd3d_version = Some(tag);
     }
     if missing_dxvk || dxvk_source_changed {
-        download_and_extract(&config.dxvk_repo, false, &config.payload_dir)?;
+        let tag = download_and_extract(&config.dxvk_repo, false, &config.payload_dir)?;
         manifest.dxvk_repo = Some(config.dxvk_repo.clone());
+        manifest.dxvk_version = Some(tag);
     }
 
     write_runtime_manifest(&manifest_path, &manifest)
+}
+
+/// Read the installed runtime manifest (sources + versions) for a config.
+pub fn installed_manifest(config: &crate::Config) -> RuntimeManifest {
+    read_runtime_manifest(&config.payload_dir.join(RUNTIME_MANIFEST_FILE)).unwrap_or_default()
+}
+
+/// Force a fresh download of both components' latest releases (used by reinstall),
+/// recording the resolved sources and versions regardless of what is already present.
+///
+/// # Errors
+///
+/// Returns an error when a component cannot be downloaded, extracted, or recorded.
+pub fn refresh_runtime(config: &crate::Config) -> Result<()> {
+    fs::create_dir_all(&config.payload_dir).context("failed to create payload directory")?;
+    let manifest_path = config.payload_dir.join(RUNTIME_MANIFEST_FILE);
+    let mut manifest = read_runtime_manifest(&manifest_path)?;
+
+    let mut has_vkd3d = false;
+    let mut has_dxvk = false;
+    for mapping in &config.files {
+        match component_for_path(&mapping.source) {
+            Some(RuntimeComponent::Vkd3d) => has_vkd3d = true,
+            Some(RuntimeComponent::Dxvk) => has_dxvk = true,
+            None => {}
+        }
+    }
+
+    if has_vkd3d {
+        let tag = download_and_extract(&config.vkd3d_repo, true, &config.payload_dir)?;
+        manifest.vkd3d_repo = Some(config.vkd3d_repo.clone());
+        manifest.vkd3d_version = Some(tag);
+    }
+    if has_dxvk {
+        let tag = download_and_extract(&config.dxvk_repo, false, &config.payload_dir)?;
+        manifest.dxvk_repo = Some(config.dxvk_repo.clone());
+        manifest.dxvk_version = Some(tag);
+    }
+
+    write_runtime_manifest(&manifest_path, &manifest)
+}
+
+/// Fetch the latest release tag for a repository (network call).
+///
+/// # Errors
+///
+/// Returns an error when the GitHub API cannot be reached or parsed.
+pub fn latest_release_tag(repo: &str) -> Result<String> {
+    let api_url = format!("https://api.github.com/repos/{repo}/releases/latest");
+    let response = ureq::get(&api_url)
+        .set("User-Agent", "msfs-vulkan-downloader")
+        .call()
+        .with_context(|| format!("failed to fetch latest release from {api_url}"))?;
+    if response.status() != 200 {
+        bail!("GitHub API returned status {}", response.status());
+    }
+    let release: GitHubRelease = response
+        .into_json()
+        .context("failed to parse GitHub release JSON")?;
+    Ok(release.tag_name)
 }
 
 fn component_for_path(path: &Path) -> Option<RuntimeComponent> {
@@ -120,7 +185,7 @@ fn write_runtime_manifest(path: &Path, manifest: &RuntimeManifest) -> Result<()>
 /// Returns an error if the GitHub release cannot be fetched or parsed, if no
 /// matching archive asset is found, or if the archive cannot be downloaded,
 /// read, decoded, or extracted.
-pub fn download_and_extract(repo: &str, is_vkd3d: bool, payload_dir: &Path) -> Result<()> {
+pub fn download_and_extract(repo: &str, is_vkd3d: bool, payload_dir: &Path) -> Result<String> {
     let api_url = format!("https://api.github.com/repos/{repo}/releases/latest");
 
     // Fetch release info
@@ -136,6 +201,8 @@ pub fn download_and_extract(repo: &str, is_vkd3d: bool, payload_dir: &Path) -> R
     let release: GitHubRelease = response
         .into_json()
         .context("failed to parse GitHub release JSON")?;
+
+    let tag = release.tag_name;
 
     // Find the right asset
     let asset = release
@@ -178,7 +245,7 @@ pub fn download_and_extract(repo: &str, is_vkd3d: bool, payload_dir: &Path) -> R
         extract_x64_dlls(&mut archive, payload_dir)?;
     }
 
-    Ok(())
+    Ok(tag)
 }
 
 fn extract_x64_dlls<R: Read>(archive: &mut Archive<R>, payload_dir: &Path) -> Result<()> {
