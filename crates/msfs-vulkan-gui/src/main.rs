@@ -373,68 +373,123 @@ impl MsfsVulkanApp {
     }
 
     fn refresh_deployment_status(&self) {
-        let status = Self::load_config_or_recover().and_then(|config| {
-            let deployment = Deployment::new(&config)?;
-            deployment.status()
-        });
-        let text = match status {
+        let config = Self::load_config_or_recover();
+        let status = config
+            .as_ref()
+            .map_err(|e| anyhow::anyhow!("{e}"))
+            .and_then(|config| {
+                let deployment = Deployment::new(config)?;
+                deployment.status()
+            });
+
+        // A reinstall is worth recommending when the installed source no longer
+        // matches the selected one (cheap, offline check against the manifest).
+        let source_changed = match (config.as_ref(), &status) {
+            (Ok(config), Ok(DeploymentStatus::Installed { .. })) => {
+                let manifest = msfs_vulkan_core::download::installed_manifest(config);
+                manifest.vkd3d_repo.as_deref() != Some(config.vkd3d_repo.as_str())
+                    || manifest.dxvk_repo.as_deref() != Some(config.dxvk_repo.as_str())
+            }
+            _ => false,
+        };
+
+        let installed = matches!(
+            status,
+            Ok(DeploymentStatus::Installed { .. } | DeploymentStatus::Drifted { .. })
+        );
+
+        let text = match &status {
+            Ok(DeploymentStatus::Installed { .. }) if source_changed => "Status: source changed",
             Ok(DeploymentStatus::Installed { .. }) => "Status: installed",
             Ok(DeploymentStatus::NotInstalled) => "Status: not installed",
             Ok(DeploymentStatus::Drifted { .. }) => "Status: needs attention",
             Err(_) => "Status: not configured",
         };
         self.lbl_deployment_status.set_text(text);
+
+        self.btn_install.set_text(if installed {
+            "Reinstall translation layer"
+        } else {
+            "Install translation layer"
+        });
     }
 
+    fn show_error(&self, message: &str) {
+        nwg::modal_error_message(&self.window, "Error", message);
+    }
+
+    /// Install when nothing is deployed, otherwise reinstall: revert the existing
+    /// files, pull the selected source's latest release, and deploy again. This is
+    /// what makes switching sources or grabbing a new version a single click.
     fn install(&self) {
-        self.lbl_status
-            .set_text("Preparing the Vulkan runtime. This can take a moment...");
-        match Self::load_config_or_recover() {
-            Ok(config) => {
-                if let Err(e) = msfs_vulkan_core::download::ensure_runtime(&config) {
-                    nwg::modal_error_message(
-                        &self.window,
-                        "Error",
-                        &format!("Failed to download runtime:\n{e}"),
-                    );
+        let config = match Self::load_config_or_recover() {
+            Ok(config) => config,
+            Err(e) => {
+                self.show_error(&format!("Failed to load configuration:\n{e}"));
+                return;
+            }
+        };
+
+        let already_installed = matches!(
+            Deployment::new(&config).and_then(|deployment| deployment.status()),
+            Ok(DeploymentStatus::Installed { .. } | DeploymentStatus::Drifted { .. })
+        );
+
+        self.lbl_status.set_text(if already_installed {
+            "Reinstalling the Vulkan runtime. This can take a moment..."
+        } else {
+            "Preparing the Vulkan runtime. This can take a moment..."
+        });
+
+        // Reinstall: revert the current files first so the install starts clean.
+        if already_installed {
+            match Deployment::new(&config) {
+                Ok(deployment) => {
+                    if let Err(e) = deployment.restore(true) {
+                        self.show_error(&format!("Failed to revert before reinstall:\n{e}"));
+                        return;
+                    }
+                }
+                Err(e) => {
+                    self.show_error(&format!("Deployment error:\n{e}"));
                     return;
                 }
-                match Deployment::new(&config) {
-                    Ok(deployment) => {
-                        if let Err(e) = deployment.install() {
-                            nwg::modal_error_message(
-                                &self.window,
-                                "Error",
-                                &format!("Failed to install:\n{e}"),
-                            );
-                        } else {
-                            self.lbl_status.set_text(
-                                "Translation layer installed. Flight Simulator is ready to launch.",
-                            );
-                            self.refresh_deployment_status();
-                            nwg::modal_info_message(
-                                &self.window,
-                                "Success",
-                                "Translation layer installed successfully.",
-                            );
-                        }
-                    }
-                    Err(e) => {
-                        nwg::modal_error_message(
-                            &self.window,
-                            "Error",
-                            &format!("Deployment error:\n{e}"),
-                        );
-                    }
+            }
+        }
+
+        // Force a fresh download on reinstall so a newer version or a changed
+        // source is always applied; a first install only fetches what is missing.
+        let download = if already_installed {
+            msfs_vulkan_core::download::refresh_runtime(&config)
+        } else {
+            msfs_vulkan_core::download::ensure_runtime(&config)
+        };
+        if let Err(e) = download {
+            self.show_error(&format!("Failed to download runtime:\n{e}"));
+            return;
+        }
+
+        match Deployment::new(&config) {
+            Ok(deployment) => match deployment.install() {
+                Ok(()) => {
+                    let verb = if already_installed {
+                        "reinstalled"
+                    } else {
+                        "installed"
+                    };
+                    self.lbl_status.set_text(&format!(
+                        "Translation layer {verb}. Flight Simulator is ready to launch."
+                    ));
+                    self.refresh_deployment_status();
+                    nwg::modal_info_message(
+                        &self.window,
+                        "Success",
+                        &format!("Translation layer {verb} successfully."),
+                    );
                 }
-            }
-            Err(e) => {
-                nwg::modal_error_message(
-                    &self.window,
-                    "Error",
-                    &format!("Failed to load configuration:\n{e}"),
-                );
-            }
+                Err(e) => self.show_error(&format!("Failed to install:\n{e}")),
+            },
+            Err(e) => self.show_error(&format!("Deployment error:\n{e}")),
         }
     }
 
