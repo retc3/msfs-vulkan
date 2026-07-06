@@ -395,7 +395,7 @@ impl MsfsVulkanApp {
 
         let installed = matches!(
             status,
-            Ok(DeploymentStatus::Installed { .. }) | Ok(DeploymentStatus::Drifted { .. })
+            Ok(DeploymentStatus::Installed { .. } | DeploymentStatus::Drifted { .. })
         );
 
         let text = match &status {
@@ -432,7 +432,7 @@ impl MsfsVulkanApp {
 
         let already_installed = matches!(
             Deployment::new(&config).and_then(|deployment| deployment.status()),
-            Ok(DeploymentStatus::Installed { .. }) | Ok(DeploymentStatus::Drifted { .. })
+            Ok(DeploymentStatus::Installed { .. } | DeploymentStatus::Drifted { .. })
         );
 
         self.lbl_status.set_text(if already_installed {
