@@ -11,6 +11,25 @@ use crate::state::{
     DeploymentState, OriginalFile, Phase, StateEntry, StateStore, encode_hex, replace_file,
 };
 
+/// The "why is my screen black" fix, explained for people like @Vivloss:
+///
+/// MSFS 2020 ships an NVIDIA thing called Streamline (sl.interposer.dll).
+/// Its whole job is to sit BETWEEN the game and Direct3D so it can do DLSS.
+/// Problem: with our setup, "Direct3D" is actually our Vulkan translation
+/// layer wearing a trench coat, and when Streamline pokes it with real
+/// NVIDIA driver calls it gets nonsense back, gives up, and the game sits
+/// on a black screen forever.
+///
+/// You cannot just delete sl.interposer.dll (the game literally refuses to
+/// start without it - yes we tried, rip). Luckily NVIDIA gave it an off
+/// switch: a little json file next to the dll that says "please do
+/// nothing". So on install we drop that file, and on restore we take it
+/// back out (or put back the one that was already there). DLSS options
+/// will look greyed out in game while installed - that is expected, not
+/// broken.
+const SL_INTERPOSER_CONFIG_NAME: &str = "sl.interposer.json";
+const SL_INTERPOSER_CONFIG: &str = "{\n  \"enableInterposer\": false\n}\n";
+
 #[derive(Debug)]
 pub struct Deployment<'a> {
     config: &'a Config,
@@ -108,6 +127,28 @@ impl<'a> Deployment<'a> {
                 original,
             });
         }
+
+        // Streamline kill switch: recorded like any other installed file so
+        // status verification and restore treat it uniformly.
+        if let Some(target_name) = self.streamline_config_target() {
+            let target = self.config.game_dir.join(&target_name);
+            let original = if target.exists() {
+                let backup_name = format!("{:02}.backup", state.entries.len());
+                let backup = self.store.backup_dir().join(&backup_name);
+                copy_and_verify(&target, &backup)?;
+                Some(OriginalFile {
+                    backup_name,
+                    sha256: sha256_file(&target)?,
+                })
+            } else {
+                None
+            };
+            state.entries.push(StateEntry {
+                target: target_name,
+                installed_sha256: sha256_bytes(SL_INTERPOSER_CONFIG.as_bytes()),
+                original,
+            });
+        }
         self.store.save(&state)?;
 
         for mapping in &self.config.files {
@@ -118,6 +159,14 @@ impl<'a> Deployment<'a> {
             }
             let temporary = temporary_sibling(&target);
             copy_and_verify(&source, &temporary)?;
+            replace_file(&temporary, &target)?;
+        }
+
+        if let Some(target_name) = self.streamline_config_target() {
+            let target = self.config.game_dir.join(&target_name);
+            let temporary = temporary_sibling(&target);
+            fs::write(&temporary, SL_INTERPOSER_CONFIG)
+                .with_context(|| format!("failed to write {}", temporary.display()))?;
             replace_file(&temporary, &target)?;
         }
 
@@ -206,6 +255,19 @@ impl<'a> Deployment<'a> {
 
     pub(crate) fn store(&self) -> &StateStore {
         &self.store
+    }
+
+    /// Where the Streamline off switch goes, or None when it is not needed.
+    /// Only MSFS 2020 (FlightSimulator.exe) gets it, and only when the game
+    /// actually ships sl.interposer.dll. 2024 is left alone on purpose.
+    fn streamline_config_target(&self) -> Option<PathBuf> {
+        let is_msfs2020 = self
+            .config
+            .executable
+            .file_name()
+            .is_some_and(|name| name.eq_ignore_ascii_case("FlightSimulator.exe"));
+        (is_msfs2020 && self.config.game_dir.join("sl.interposer.dll").is_file())
+            .then(|| PathBuf::from(SL_INTERPOSER_CONFIG_NAME))
     }
 
     fn preflight(&self) -> Result<()> {
@@ -299,6 +361,12 @@ fn copy_and_verify(source: &Path, target: &Path) -> Result<()> {
     Ok(())
 }
 
+fn sha256_bytes(data: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    encode_hex(&hasher.finalize())
+}
+
 /// Compute a lowercase SHA-256 digest for a file.
 ///
 /// # Errors
@@ -386,5 +454,36 @@ mod tests {
 
         assert!(deployment.restore(false).is_err());
         deployment.restore(true).unwrap();
+    }
+
+    #[test]
+    fn msfs2020_gets_streamline_kill_switch_and_restore_removes_it() {
+        let temp = TempDir::new().unwrap();
+        let game = temp.path().join("game");
+        let payload = temp.path().join("payload");
+        fs::create_dir_all(&game).unwrap();
+        fs::create_dir_all(&payload).unwrap();
+        // 2020 exe (no 2024 exe present) plus the Streamline dll the game ships.
+        fs::write(game.join("FlightSimulator.exe"), b"exe").unwrap();
+        fs::write(game.join("sl.interposer.dll"), b"streamline").unwrap();
+        for name in ["d3d12.dll", "d3d12core.dll", "d3d11.dll", "dxgi.dll"] {
+            fs::write(payload.join(name), format!("translated-{name}")).unwrap();
+        }
+        let config = Config::new(game, payload);
+        let store = StateStore::under(&temp.path().join("state"), &config.game_dir);
+        let deployment = Deployment::with_store(&config, store);
+
+        deployment.install().unwrap();
+        let written = fs::read_to_string(config.game_dir.join("sl.interposer.json")).unwrap();
+        assert!(written.contains("\"enableInterposer\": false"));
+        assert!(matches!(
+            deployment.status().unwrap(),
+            DeploymentStatus::Installed { .. }
+        ));
+
+        deployment.restore(false).unwrap();
+        assert!(!config.game_dir.join("sl.interposer.json").exists());
+        // The game's own dll is untouched.
+        assert!(config.game_dir.join("sl.interposer.dll").exists());
     }
 }
