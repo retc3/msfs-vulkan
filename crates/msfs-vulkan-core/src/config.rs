@@ -53,7 +53,11 @@ pub const DEFAULT_DXVK_REPO: &str = "doitsujin/dxvk";
 /// forks that read msfs-vulkan-debug.conf). MSFS blocks env vars, so only these
 /// can produce logs on demand; the GUI enables "Start with Debugging Options"
 /// only when both selected sources are debug-capable. Extend as forks are added.
-pub const DEBUG_CAPABLE_REPOS: &[&str] = &["retc3/msfs-vkd3d", "retc3/msfs-dxvk"];
+pub const DEBUG_CAPABLE_REPOS: &[&str] = &[
+    "retc3/msfs-vkd3d",
+    "retc3/msfs-dxvk",
+    "retc3/msfs-dxvk-compat-2.7",
+];
 
 /// Whether a repository slug supports env-var-free debug logging.
 pub fn repo_supports_debug(repo: &str) -> bool {
@@ -72,6 +76,12 @@ pub const VKD3D_REPOSITORY_PRESETS: &[(&str, &str)] = &[
 pub const DXVK_REPOSITORY_PRESETS: &[(&str, &str)] = &[
     ("Official DXVK", DEFAULT_DXVK_REPO),
     ("MSFS Tailored DXVK", "retc3/msfs-dxvk"),
+    // DXVK 2.7 based build for GPUs whose Vulkan driver can't satisfy the
+    // DXVK 3.x rewrite's requirements (Intel iGPUs on Windows, mostly).
+    (
+        "MSFS Tailored DXVK (compat, Intel)",
+        "retc3/msfs-dxvk-compat-2.7",
+    ),
 ];
 
 /// Resolve the app-local data directory used for persistent config, state, logs, and runtime files.
