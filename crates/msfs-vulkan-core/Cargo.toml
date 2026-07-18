@@ -15,7 +15,7 @@ serde_json.workspace = true
 sha2.workspace = true
 tar = "0.4.46"
 toml.workspace = true
-ureq = { version = "2", features = ["json"] }
+ureq = { version = "3", features = ["json"] }
 zstd = "0.13.3"
 
 [target.'cfg(windows)'.dependencies]
